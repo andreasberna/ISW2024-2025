@@ -1,0 +1,66 @@
+@startuml
+left to right direction
+skinparam usecase {
+  BorderColor #555
+  BackgroundColor #f9f9f9
+}
+actor Configuratore
+
+rectangle "Sistema Visite – V1" as Sistema {
+  ' --- ACCESSO ---
+  package "Accesso" {
+    usecase "UC1 Effettuare il primo accesso" as UC1
+    usecase "UC2 Impostare credenziali personali" as UC2
+    usecase "UC3 Accedere con credenziali personali" as UC3
+  }
+
+  ' --- SETUP  ---
+  package "Creazione corpo dati" {
+    usecase "UC4 Impostare ambito territoriale" as UC4
+    usecase "UC5 Impostare max persone per iscrizione" as UC5
+    usecase "UC6 Inserire luogo" as UC6
+    usecase "UC7 Associare tipo di visita a luogo" as UC7
+    usecase "UC8 Associare volontario a tipo di visita" as UC8
+  }
+
+  ' --- A REGIME / CONSULTAZIONI ---
+  package "A regime" {
+    usecase "UC9 Indicare date i+3 precluse" as UC9
+    usecase "UC10 Modificare max persone per iscrizione" as UC10
+    usecase "UC11 Visualizzare elenco volontari" as UC11
+    usecase "UC12 Visualizzare elenco luoghi" as UC12
+    usecase "UC13 Visualizzare tipi di visita per luogo" as UC13
+    usecase "UC14 Visualizzare visite per stato" as UC14
+  }
+}
+
+' Associazioni attore -> UC
+Configuratore -- UC1
+Configuratore -- UC2
+Configuratore -- UC3
+Configuratore -- UC4
+Configuratore -- UC5
+Configuratore -- UC6
+Configuratore -- UC7
+Configuratore -- UC8
+Configuratore -- UC9
+Configuratore -- UC10
+Configuratore -- UC11
+Configuratore -- UC12
+Configuratore -- UC13
+Configuratore -- UC14
+
+' Include (unico in V1)
+UC1 ..> UC2 : <<include>>
+
+' Esempi di note (opzionali)
+note right of UC4
+  Una sola esecuzione.
+  Non modificabile dopo il salvataggio.
+end note
+
+note right of UC14
+  Stati: proposta, completa, confermata,
+  cancellata, effettuata.
+end note
+@enduml
