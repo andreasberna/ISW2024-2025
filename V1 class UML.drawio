@@ -214,7 +214,7 @@
           <mxGeometry y="48" width="240" height="92" as="geometry" />
         </mxCell>
         <mxCell id="Hnqj2KVuf7kFtrVtC3s6-75" value="JSONVolunteerRepository" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-          <mxGeometry x="-540" y="1670" width="350" height="200" as="geometry" />
+          <mxGeometry x="-540" y="1670" width="350" height="230" as="geometry" />
         </mxCell>
         <mxCell id="Hnqj2KVuf7kFtrVtC3s6-76" value="&lt;div&gt;- file : Path&lt;/div&gt;&lt;div&gt;- cache : Map&amp;lt;String, Volunteer&amp;gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="Hnqj2KVuf7kFtrVtC3s6-75" vertex="1">
           <mxGeometry y="26" width="350" height="54" as="geometry" />
@@ -222,16 +222,17 @@
         <mxCell id="Hnqj2KVuf7kFtrVtC3s6-77" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" parent="Hnqj2KVuf7kFtrVtC3s6-75" vertex="1">
           <mxGeometry y="80" width="350" height="8" as="geometry" />
         </mxCell>
-        <mxCell id="Hnqj2KVuf7kFtrVtC3s6-78" value="&lt;div&gt;+ JSONVolunteerRepository(file : Path, codec : JsonCodec)&lt;/div&gt;&lt;div&gt;+ findByNickname(nickname : String) : Optional&amp;lt;Volunteer&amp;gt;&lt;/div&gt;&lt;div&gt;+ findAll() : List&amp;lt;Volunteer&amp;gt;&lt;/div&gt;&lt;div&gt;+ save(volunteer : Volunteer) : void&lt;/div&gt;&lt;div&gt;+ deleteByNickname(nickname : String) : void&lt;/div&gt;&lt;div&gt;- readAll() : List&amp;lt;Volunteer&amp;gt;&lt;/div&gt;&lt;div&gt;- writeAll(volunteers : List&amp;lt;Volunteer&amp;gt;) : void&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="Hnqj2KVuf7kFtrVtC3s6-75" vertex="1">
-          <mxGeometry y="88" width="350" height="112" as="geometry" />
+        <mxCell id="Hnqj2KVuf7kFtrVtC3s6-78" value="&lt;div&gt;+ JSONVolunteerRepository(file : Path, codec : JsonCodec)&lt;/div&gt;&lt;div&gt;- init() : void&lt;/div&gt;&lt;div&gt;- persist(): void&lt;/div&gt;&lt;div&gt;+ findByNickname(nickname : String) : Optional&amp;lt;Volunteer&amp;gt;&lt;/div&gt;&lt;div&gt;+ findAll() : List&amp;lt;Volunteer&amp;gt;&lt;/div&gt;&lt;div&gt;+ save(volunteer : Volunteer) : void&lt;/div&gt;&lt;div&gt;+ deleteByNickname(nickname : String) : void&lt;/div&gt;&lt;div&gt;- readAll() : List&amp;lt;Volunteer&amp;gt;&lt;/div&gt;&lt;div&gt;- writeAll(volunteers : List&amp;lt;Volunteer&amp;gt;) : void&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="Hnqj2KVuf7kFtrVtC3s6-75" vertex="1">
+          <mxGeometry y="88" width="350" height="142" as="geometry" />
         </mxCell>
         <mxCell id="Hnqj2KVuf7kFtrVtC3s6-197" value="" style="endArrow=open;endSize=12;dashed=1;html=1;rounded=0;entryX=-0.016;entryY=0.761;entryDx=0;entryDy=0;entryPerimeter=0;" parent="Hnqj2KVuf7kFtrVtC3s6-75" target="Hnqj2KVuf7kFtrVtC3s6-111" edge="1">
           <mxGeometry width="160" relative="1" as="geometry">
-            <mxPoint x="190" y="200" as="sourcePoint" />
+            <mxPoint x="190" y="230" as="sourcePoint" />
             <mxPoint x="350" y="200" as="targetPoint" />
             <Array as="points">
               <mxPoint x="190" y="250" />
-              <mxPoint x="1670" y="250" />
+              <mxPoint x="930" y="270" />
+              <mxPoint x="1660" y="270" />
               <mxPoint x="1670" y="100" />
               <mxPoint x="2100" y="100" />
             </Array>
@@ -246,7 +247,7 @@
         <mxCell id="Hnqj2KVuf7kFtrVtC3s6-81" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" parent="Hnqj2KVuf7kFtrVtC3s6-79" vertex="1">
           <mxGeometry y="80" width="320" height="8" as="geometry" />
         </mxCell>
-        <mxCell id="Hnqj2KVuf7kFtrVtC3s6-82" value="&lt;div&gt;+ JSONPlaceRepository(file : Path, codec : JsonCodec)&lt;/div&gt;&lt;div&gt;+ findById(id : String) : Optional&amp;lt;Place&amp;gt;&lt;/div&gt;&lt;div&gt;+ findAll() : List&amp;lt;Place&amp;gt;&lt;/div&gt;&lt;div&gt;+ save(place : Place) : void&lt;/div&gt;&lt;div&gt;+ deleteById(id : String) : void&lt;/div&gt;&lt;div&gt;- readAll() : List&amp;lt;Place&amp;gt;&lt;/div&gt;&lt;div&gt;- writeAll(places : List&amp;lt;Place&amp;gt;) : void&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="Hnqj2KVuf7kFtrVtC3s6-79" vertex="1">
+        <mxCell id="Hnqj2KVuf7kFtrVtC3s6-82" value="&lt;div&gt;+ JSONPlaceRepository(file : Path, codec : JsonCodec)&lt;/div&gt;&lt;div&gt;&lt;div&gt;- init() : void&lt;/div&gt;&lt;div&gt;- persist(): void&lt;/div&gt;&lt;/div&gt;&lt;div&gt;+ findById(id : String) : Optional&amp;lt;Place&amp;gt;&lt;/div&gt;&lt;div&gt;+ findAll() : List&amp;lt;Place&amp;gt;&lt;/div&gt;&lt;div&gt;+ save(place : Place) : void&lt;/div&gt;&lt;div&gt;+ deleteById(id : String) : void&lt;/div&gt;&lt;div&gt;- readAll() : List&amp;lt;Place&amp;gt;&lt;/div&gt;&lt;div&gt;- writeAll(places : List&amp;lt;Place&amp;gt;) : void&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="Hnqj2KVuf7kFtrVtC3s6-79" vertex="1">
           <mxGeometry y="88" width="320" height="120" as="geometry" />
         </mxCell>
         <mxCell id="Hnqj2KVuf7kFtrVtC3s6-200" value="" style="endArrow=open;endSize=12;dashed=1;html=1;rounded=0;" parent="Hnqj2KVuf7kFtrVtC3s6-79" edge="1">
@@ -256,7 +257,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="Hnqj2KVuf7kFtrVtC3s6-83" value="JSONVisitTypeRepository" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-          <mxGeometry x="270" y="1680" width="340" height="210" as="geometry" />
+          <mxGeometry x="270" y="1680" width="340" height="230" as="geometry" />
         </mxCell>
         <mxCell id="Hnqj2KVuf7kFtrVtC3s6-84" value="&lt;div&gt;- file : Path&lt;/div&gt;&lt;div&gt;- cache : Map&amp;lt;String, VisitType&amp;gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="Hnqj2KVuf7kFtrVtC3s6-83" vertex="1">
           <mxGeometry y="26" width="340" height="54" as="geometry" />
@@ -264,11 +265,11 @@
         <mxCell id="Hnqj2KVuf7kFtrVtC3s6-85" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" parent="Hnqj2KVuf7kFtrVtC3s6-83" vertex="1">
           <mxGeometry y="80" width="340" height="8" as="geometry" />
         </mxCell>
-        <mxCell id="Hnqj2KVuf7kFtrVtC3s6-86" value="&lt;div&gt;+ JSONVisitTypeRepository(file : Path, codec : JsonCodec)&lt;/div&gt;&lt;div&gt;+ findById(id : String) : Optional&amp;lt;VisitType&amp;gt;&lt;/div&gt;&lt;div&gt;+ findByPlace(placeId : String) : List&amp;lt;VisitType&amp;gt;&lt;/div&gt;&lt;div&gt;+ save(visitType : VisitType) : void&lt;/div&gt;&lt;div&gt;+ deleteById(id : String) : void&lt;/div&gt;&lt;div&gt;- readAll() : List&amp;lt;VisitType&amp;gt;&lt;/div&gt;&lt;div&gt;- writeAll(visitTypes : List&amp;lt;VisitType&amp;gt;) : void&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="Hnqj2KVuf7kFtrVtC3s6-83" vertex="1">
-          <mxGeometry y="88" width="340" height="122" as="geometry" />
+        <mxCell id="Hnqj2KVuf7kFtrVtC3s6-86" value="&lt;div&gt;+ JSONVisitTypeRepository(file : Path, codec : JsonCodec)&lt;/div&gt;&lt;div&gt;&lt;div&gt;- init() : void&lt;/div&gt;&lt;div&gt;- persist(): void&lt;/div&gt;&lt;/div&gt;&lt;div&gt;+ findById(id : String) : Optional&amp;lt;VisitType&amp;gt;&lt;/div&gt;&lt;div&gt;+ findByPlace(placeId : String) : List&amp;lt;VisitType&amp;gt;&lt;/div&gt;&lt;div&gt;+ save(visitType : VisitType) : void&lt;/div&gt;&lt;div&gt;+ deleteById(id : String) : void&lt;/div&gt;&lt;div&gt;- readAll() : List&amp;lt;VisitType&amp;gt;&lt;/div&gt;&lt;div&gt;- writeAll(visitTypes : List&amp;lt;VisitType&amp;gt;) : void&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="Hnqj2KVuf7kFtrVtC3s6-83" vertex="1">
+          <mxGeometry y="88" width="340" height="142" as="geometry" />
         </mxCell>
         <mxCell id="Hnqj2KVuf7kFtrVtC3s6-87" value="JSONSettingsRepository" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-          <mxGeometry x="710" y="1690" width="360" height="198" as="geometry" />
+          <mxGeometry x="710" y="1690" width="360" height="220" as="geometry" />
         </mxCell>
         <mxCell id="Hnqj2KVuf7kFtrVtC3s6-88" value="&lt;div&gt;- file : Path&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="Hnqj2KVuf7kFtrVtC3s6-87" vertex="1">
           <mxGeometry y="26" width="360" height="44" as="geometry" />
@@ -276,12 +277,12 @@
         <mxCell id="Hnqj2KVuf7kFtrVtC3s6-89" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" parent="Hnqj2KVuf7kFtrVtC3s6-87" vertex="1">
           <mxGeometry y="70" width="360" height="8" as="geometry" />
         </mxCell>
-        <mxCell id="Hnqj2KVuf7kFtrVtC3s6-90" value="&lt;div&gt;+ JSONSettingsRepository(file : Path, codec : JsonCodec)&lt;/div&gt;&lt;div&gt;+ load() : Optional&amp;lt;SystemSettings&amp;gt;&lt;/div&gt;&lt;div&gt;+ save(settings : SystemSettings) : void&lt;/div&gt;&lt;div&gt;+ exists() : boolean&lt;/div&gt;&lt;div&gt;- ensureFile() : void&lt;/div&gt;&lt;div&gt;- read() : Optional&amp;lt;SystemSettings&amp;gt;&lt;/div&gt;&lt;div&gt;- write(settings : SystemSettings) : void&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="Hnqj2KVuf7kFtrVtC3s6-87" vertex="1">
-          <mxGeometry y="78" width="360" height="120" as="geometry" />
+        <mxCell id="Hnqj2KVuf7kFtrVtC3s6-90" value="&lt;div&gt;+ JSONSettingsRepository(file : Path, codec : JsonCodec)&lt;/div&gt;&lt;div&gt;&lt;div&gt;- init() : void&lt;/div&gt;&lt;div&gt;- persist(): void&lt;/div&gt;&lt;/div&gt;&lt;div&gt;+ load() : Optional&amp;lt;SystemSettings&amp;gt;&lt;/div&gt;&lt;div&gt;+ save(settings : SystemSettings) : void&lt;/div&gt;&lt;div&gt;+ exists() : boolean&lt;/div&gt;&lt;div&gt;- ensureFile() : void&lt;/div&gt;&lt;div&gt;- read() : Optional&amp;lt;SystemSettings&amp;gt;&lt;/div&gt;&lt;div&gt;- write(settings : SystemSettings) : void&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="Hnqj2KVuf7kFtrVtC3s6-87" vertex="1">
+          <mxGeometry y="78" width="360" height="142" as="geometry" />
         </mxCell>
         <mxCell id="Hnqj2KVuf7kFtrVtC3s6-199" value="Use" style="endArrow=open;endSize=12;dashed=1;html=1;rounded=0;entryX=0.188;entryY=1.039;entryDx=0;entryDy=0;entryPerimeter=0;" parent="Hnqj2KVuf7kFtrVtC3s6-87" target="Hnqj2KVuf7kFtrVtC3s6-103" edge="1">
           <mxGeometry width="160" relative="1" as="geometry">
-            <mxPoint x="270" y="196" as="sourcePoint" />
+            <mxPoint x="270" y="220" as="sourcePoint" />
             <mxPoint x="430" y="196" as="targetPoint" />
             <Array as="points">
               <mxPoint x="270" y="790" />
@@ -730,7 +731,7 @@
             <mxPoint x="840" y="1689" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="Hnqj2KVuf7kFtrVtC3s6-198" value="" style="endArrow=open;endSize=12;dashed=1;html=1;rounded=0;entryX=-0.012;entryY=0.071;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" target="Hnqj2KVuf7kFtrVtC3s6-99" edge="1">
+        <mxCell id="Hnqj2KVuf7kFtrVtC3s6-198" value="" style="endArrow=open;endSize=12;dashed=1;html=1;rounded=0;entryX=-0.012;entryY=0.071;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.72;exitY=1.007;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" target="Hnqj2KVuf7kFtrVtC3s6-99" edge="1" source="Hnqj2KVuf7kFtrVtC3s6-86">
           <mxGeometry x="0.0012" width="160" relative="1" as="geometry">
             <mxPoint x="510" y="1890" as="sourcePoint" />
             <mxPoint x="670" y="1890" as="targetPoint" />
