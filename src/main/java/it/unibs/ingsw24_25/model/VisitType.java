@@ -44,7 +44,6 @@ public class VisitType {
     }
 
 
-
     public String getVisitTitle() {
         return visitTitle;
     }
