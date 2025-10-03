@@ -10,15 +10,32 @@ import java.util.List;
 
 public interface ConfiguratorService {
 
-    public void setTerritorialScope(String scope);
-    public void setMaxPeoplePerSubscription(int max);
-    public String addPlace(String name, String description, String location);
-    public String addVisitType(String placeID, String title, String description, String meetLocation, List<TimeSlot> schedules,
-                               boolean ticketRequired, int minParticipants, int maxParticipants, LocalDate validFrom, LocalDate validTo);
-    public void addVolunteer(String nickname);
-    public void linkVOlunteerToVisit(String nickname, String visitTypeId);
-    public List<PlaceDTO> listPlace();
-    public List<VisitTypeDTO> listVisitTypeByPlace(String placeId);
-    public List<VolunteerDTO> listVolunteerWVisitType();
+    boolean isFirstAccessPending();
+
+    void verifyDefaultCredentials(String nickname, String password);
+
+    void setPersonalCredentials(String nickname, String password);
+
+    boolean verifyLogin(String nickname, String password);
+
+    void setTerritorialScope(String scope);
+
+    void setMaxPeoplePerSubscription(int max);
+
+    String addPlace(String name, String description, String location);
+
+    String addVisitType(String placeID, String title, String description, String meetLocation, List<TimeSlot> schedules,
+
+                        boolean ticketRequired, int minParticipants, int maxParticipants, LocalDate validFrom, LocalDate validTo);
+
+    void addVolunteer(String nickname);
+
+    void linkVOlunteerToVisit(String nickname, String visitTypeId);
+
+    List<PlaceDTO> listPlace();
+
+    List<VisitTypeDTO> listVisitTypeByPlace(String placeId);
+
+    List<VolunteerDTO> listVolunteerWVisitType();
 
 }

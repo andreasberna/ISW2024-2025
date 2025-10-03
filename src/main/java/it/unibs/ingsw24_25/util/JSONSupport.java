@@ -15,12 +15,21 @@ public final class JSONSupport {
             .create();
 
     // Tipi per la (de)serializzazione delle mappe
+    private static final Type CONFIG_MAP_TYPE = new TypeToken<Map<String, Configurator>>(){}.getType ();
     private static final Type VOL_MAP_TYPE = new TypeToken<Map<String, Volunteer>>(){}.getType();
     private static final Type PLACE_MAP_TYPE = new TypeToken<Map<String, Place>>(){}.getType();
     private static final Type VISIT_MAP_TYPE = new TypeToken<Map<String, VisitType>>(){}.getType();
 
     private JSONSupport() {
         // Costruttore privato: classe utility
+    }
+
+    // ---------- Configurator ----------
+    public static String serializeConfigurator(Map<String, Configurator> map){
+        return GSON.toJson (map, CONFIG_MAP_TYPE);
+    }
+    public static Map<String, Configurator> deserializeConfigurator(String json){
+        return GSON.fromJson (json, CONFIG_MAP_TYPE);
     }
 
     // ---------- Volunteer ----------

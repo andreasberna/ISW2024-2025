@@ -25,9 +25,10 @@ public final class DTOMapper {
     public static VisitTypeDTO visitTypeToDTO(VisitType vt){
         String daySummary = summarizeDays(vt.getSchedules ());
         String start = startTimeString (vt);
+        String end = endTimeString (vt);
         int duration = durationMinutes (vt);
         return new VisitTypeDTO (
-                vt.getVisitTitle (), vt.getVisitDescription (), daySummary, start,
+                vt.getVisitTitle (), daySummary, start, end,
                 duration, vt.getTicketRequired (),
                 vt.getMinParticipants (), vt.getMaxParticipants ());
 
@@ -55,6 +56,13 @@ public final class DTOMapper {
         if(vt.getSchedules ().isEmpty()) return "-";
 
         return vt.getSchedules ().get(0).getStartTime().toString();
+    }
+
+    private static String endTimeString(VisitType vt){
+        if(vt.getSchedules ().isEmpty()) return "-";
+
+        var slot = vt.getSchedules ().get(0);
+        return slot.getStartTime ().plus (slot.getDuration ()).toString ();
     }
 
     private static int durationMinutes(VisitType vt){
