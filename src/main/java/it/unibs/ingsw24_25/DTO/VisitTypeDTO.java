@@ -10,11 +10,13 @@ public class VisitTypeDTO {
     private int minParticipants;
     private int maxParticipants;
 
-    public VisitTypeDTO(String title, String daySummary, String startTime, String endTime, int durationMinutes, boolean ticketRequired, int minParticipants, int maxParticipants) {
+    public VisitTypeDTO(String title, String daySummary, String startTime, String endTime,
+                        int durationMinutes, boolean ticketRequired, int minParticipants, int maxParticipants) {
         this.title = title;
         this.daySummary = daySummary;
         this.startTime = startTime;
         this.endTime = endTime;
+        this.ticketRequired = ticketRequired;
         this.durationMinutes = durationMinutes;
         this.minParticipants = minParticipants;
         this.maxParticipants = maxParticipants;
@@ -28,6 +30,9 @@ public class VisitTypeDTO {
     }
     public String getStartTime() {
         return startTime;
+    }
+    public String getendTime(){
+        return endTime;
     }
     public int getDurationMinutes() {
         return durationMinutes;
