@@ -1,5 +1,6 @@
 package it.unibs.ingsw24_25.repository;
 
+import it.unibs.ingsw24_25.model.VisitState;
 import it.unibs.ingsw24_25.model.VisitType;
 import it.unibs.ingsw24_25.util.JSONSupport;
 
@@ -56,6 +57,20 @@ public class JSONVisitTypeRepository implements VisitTypeRepository {
     public List<VisitType> findByPlace(String placeID) {
         List<VisitType> ret = cache.values ().stream ().filter (visitType -> visitType.getPlace ().getPlaceTitle ().equals (placeID)).collect (Collectors.toList ());
         return ret;
+    }
+
+    @Override
+    public List<VisitType> findByState(VisitState... states){
+        if(states == null || states.length == 0) return List.of();
+        Set<VisitState> wanted = EnumSet.copyOf (Arrays.asList(states));
+        return cache.values ().stream ()
+                .filter (vt -> vt.getState () != null && wanted.contains (vt.getState ()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<VisitType> findAll() {
+        return new  ArrayList<> (cache.values ());
     }
 
     @Override

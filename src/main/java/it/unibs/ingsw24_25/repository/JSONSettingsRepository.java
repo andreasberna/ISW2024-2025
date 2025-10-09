@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -66,7 +67,10 @@ public class JSONSettingsRepository implements SettingsRepository {
 
     public void updateMaxPeoplePerSubscription(int newValue){
         if(cache == null) throw new IllegalStateException ("Settings non ancora inizializzati");
-        this.cache = new SystemSettings (cache.getTerritorialScope(), newValue);
-        persist();
+        this.cache = new SystemSettings (
+                cache.getTerritorialScope (),
+                newValue,
+                new ArrayList<> (cache.getExcludedDates ())
+        );
     }
 }
