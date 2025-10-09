@@ -30,7 +30,7 @@ public final class DTOMapper {
         return new VisitTypeDTO (
                 vt.getVisitTitle (), daySummary, start, end,
                 duration, vt.getTicketRequired (),
-                vt.getMinParticipants (), vt.getMaxParticipants ());
+                vt.getMinParticipants (), vt.getMaxParticipants (), vt.getPlace ().getPlaceTitle (), vt.getState ());
 
     }
 
