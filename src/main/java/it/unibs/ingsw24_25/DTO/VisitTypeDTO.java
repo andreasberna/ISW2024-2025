@@ -1,5 +1,11 @@
 package it.unibs.ingsw24_25.DTO;
 
+import it.unibs.ingsw24_25.model.Place;
+import it.unibs.ingsw24_25.model.VisitState;
+import it.unibs.ingsw24_25.model.Volunteer;
+
+import java.util.List;
+
 public class VisitTypeDTO {
     private String title;
     private String daySummary;
@@ -9,9 +15,12 @@ public class VisitTypeDTO {
     private boolean ticketRequired;
     private int minParticipants;
     private int maxParticipants;
+    private String placeID;
+    private VisitState state;
+
 
     public VisitTypeDTO(String title, String daySummary, String startTime, String endTime,
-                        int durationMinutes, boolean ticketRequired, int minParticipants, int maxParticipants) {
+                        int durationMinutes, boolean ticketRequired, int minParticipants, int maxParticipants, String placeID, VisitState state ) {
         this.title = title;
         this.daySummary = daySummary;
         this.startTime = startTime;
@@ -20,6 +29,8 @@ public class VisitTypeDTO {
         this.durationMinutes = durationMinutes;
         this.minParticipants = minParticipants;
         this.maxParticipants = maxParticipants;
+        this.placeID = placeID;
+        this.state = state;
     }
 
     public String getTitle() {
@@ -45,5 +56,11 @@ public class VisitTypeDTO {
     }
     public int getMaxParticipants() {
         return maxParticipants;
+    }
+    public String getPlaceID() {
+        return placeID;
+    }
+    public VisitState getState() {
+        return state;
     }
 }
