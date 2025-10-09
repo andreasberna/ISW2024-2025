@@ -8,87 +8,71 @@ import java.util.Scanner;
 
 public class CliApp implements Runnable {
     private static final String DEFAULT_PROMPT = "> ";
-    private static final String DEFUALT_EXIT_COMMAND = "exit";
+    private static final String EXIT_COMMAND = "exit";
+    private static final String INVALID_COMMAND_MESSAGE = "Comando non valido";
+    private static final String MENU_SEPARATOR = "-----------------------";
 
     private final PromptReader reader;
     private final Printer printer;
     private final CommandRouter router;
-    private final String prompt;
-    private final String exitCommand;
 
     private volatile boolean running;
 
     public CliApp(PromptReader reader, Printer printer, CommandRouter router) {
-        this.reader = reader;
-        this.printer = printer;
-        this.router = router;
-        this.prompt = DEFAULT_PROMPT;
-        this.exitCommand = DEFUALT_EXIT_COMMAND;
-    }
-
-    public CliApp(
-            PromptReader reader,
-            Printer printer,
-            CommandRouter router,
-            String prompt,
-            String exitCommand) {
-
-        this.reader = Objects.requireNonNull(reader, "reader non può essere nullo");
+        this.reader = Objects.requireNonNull(reader, "reader non puù essere nullo");
         this.printer = Objects.requireNonNull(printer, "printer non può essere nullo");
         this.router = Objects.requireNonNull(router, "router non può essere nullo");
-        this.prompt = prompt == null ? DEFAULT_PROMPT : prompt;
-        this.exitCommand = exitCommand == null ? DEFUALT_EXIT_COMMAND : exitCommand;
-    }
-
-    public void start(){
-        ensureStartable();
-        printer.println ("Digita '" + exitCommand + "' per uscire");
-        loop();
-    }
-
-    private void ensureStartable() {
-        synchronized (this){
-            if (running){
-                throw new IllegalStateException("CLI già in esecuzione");
-            }
-            running = true;
-        }
-    }
-
-    private void loop(){
-        while (isRunning()){
-            String rawInput = reader.readLine (prompt);
-            if(rawInput == null){
-                printer.println ("nessun altro input: terminazione");
-                stop();
-                break;
-            }
-
-            String command = rawInput.trim();
-            if(command.isEmpty()){continue;}
-
-            if(command.equals(exitCommand)){stop(); break;}
-
-            boolean handled = router.route(command);
-            if(!handled){printer.printError ("Comando sconosciuto: " + command);}
-        }
-    }
-
-    public void stop(){
-        boolean wasRunning;
-        synchronized (this){
-            wasRunning = running;
-            running = false;
-        }
-        if (wasRunning){printer.println("Arrivederci!");}
-    }
-
-    public boolean isRunning(){
-        return running;
     }
 
     @Override
     public void run() {
-        start();
+        running = true;
+        printer.println (MENU_SEPARATOR);
+        printer.println ("Benvenuto!");
+        printer.println (MENU_SEPARATOR);
+        while (running) {
+            showMenu();
+            String command = reader.readLine (DEFAULT_PROMPT);
+            if(command.equalsIgnoreCase (EXIT_COMMAND)) {
+                running = false;
+                continue;
+            }
+            executeCommand(command);
+        }
+        printer.println ("Arrivederci!");
     }
+
+    public void start(){
+        new Thread(this).start ();
+    }
+    private void executeCommand(String command) {
+        if (command == null || command.isBlank ()) {
+            printer.println (INVALID_COMMAND_MESSAGE);
+            return;
+        }
+        if (!router.route(command.trim()))
+            printer.println (INVALID_COMMAND_MESSAGE);
+    }
+
+    private void showMenu(){
+        printer.println(MENU_SEPARATOR);
+        printer.println("Scegli un'opzione");
+        printer.println("1 - Visualizza luoghi");
+        printer.println("2 - Visualizza visite per luogo");
+        printer.println("3 - Visualizza visite con stato visita");
+        printer.println("4 - Visualizza volontari");
+        printer.println("5 - Imposta date precluse");
+        printer.println("6 - Imposta max persone per iscrizione");
+        printer.println("exit - Esci");
+        printer.println(MENU_SEPARATOR);
+    }
+
+    public void stop(){
+        running = false;
+    }
+    public boolean isRunning() {
+        return running;
+    }
+
+
 }

@@ -6,84 +6,112 @@ import it.unibs.ingsw24_25.DTO.VolunteerDTO;
 
 import java.io.PrintStream;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class Printer {
-    private static final String DEFAULT_PLACE_HEADER = "Luoghi disponibili:";
-    private static final String DEFAULT_VISITTYPE_HEADER = "Tipi di visita:";
-    private static final String DEFAULT_VOLUNTEER_HEADER = "Volontari registrati:";
-    private static final String DEFAULT_EMPTY_PLACE = "Nessun luogo disponibile.";
-    private static final String DEFAULT_EMPTY_VISITTYPE = "Nessun tipo di visita disponibile.";
-    private static final String DEFAULT_EMPTY_VOLUNTEER = "Nessun voluntari disponibile.";
+    public static final String PLACE_HEADER = "Luoghi disponibili:";
+    public static final String PLACE_EMPTY_MESSAGE = "Nessun luogo registrato al momento";
+    public static final String VISIT_TYPE_HEADER = "Visite disponibili:";
+    public static final String VISIT_TYPE_EMPTY_MESSAGE = "Nessuna visita registrata al momento";
+    public static final String VOLUNTEER_HEADER = "Volontari disponibili:";
+    public static final String VOLUNTEER_EMPTY_MESSAGE = "Nessun volontario disponibile al momento";
 
-    private PrintStream out;
+    private final PrintStream out;
 
     public Printer(PrintStream out) {
-        this.out = out;
+        this.out = Objects.requireNonNull(out, "PrintStream non può essere nullo");
     }
 
-    public void println(String text){
+    public void println(String text) {
         out.println(text);
     }
-    public void printError(String message){
-        out.println("[ERRORE] " + message);
+
+    public void print(String text) {
+        out.print(text);
     }
-    public void printPlaceList(List<PlaceDTO> list){
-        out.println(DEFAULT_PLACE_HEADER);
-        if(list == null || list.isEmpty()){
-            out.println(" " +  DEFAULT_EMPTY_PLACE);
-            return;
-        }
-        list.forEach(p->out.println(" -" + format(p)));
-    }
-    public void printVisitTypeList(List<VisitTypeDTO> list){
-        out.println(DEFAULT_VISITTYPE_HEADER);
-        if(list == null || list.isEmpty()){
-            out.println(" " +  DEFAULT_EMPTY_VISITTYPE);
+
+    public void printPlaceList(List<PlaceDTO> places) {
+        if (places == null || places.isEmpty()) {
+            out.println(PLACE_EMPTY_MESSAGE);
             return;
         }
 
-        list.forEach (vt -> {
-            out.println (" -" + format(vt));
-        });
+        places.stream()
+                .map(this::format)
+                .forEach(out::println);
     }
-    public void printVolunteerList(List<VolunteerDTO> list){
-        out.println(DEFAULT_VOLUNTEER_HEADER);
-        if(list == null || list.isEmpty()){
-            out.println(" " +  DEFAULT_EMPTY_VOLUNTEER);
+
+    public void printVisitTypeList(List<VisitTypeDTO> visitTypes) {
+        if (visitTypes == null || visitTypes.isEmpty()) {
+            out.println(VISIT_TYPE_EMPTY_MESSAGE);
             return;
         }
-        list.forEach (v -> {
-            out.println (" -" + v.getNickname ());
-            v.getVisitTypeTitles ().forEach (vvt -> out.println ("  -" + vvt));
-        });
+
+        visitTypes.stream()
+                .map(this::format)
+                .forEach(out::println);
     }
 
-    public void printVisitTypeState(List<VisitTypeDTO> list){
-        out.println(DEFAULT_VISITTYPE_HEADER);
-        if(list == null || list.isEmpty()){
-            println(" " +  DEFAULT_EMPTY_VISITTYPE);
+    public void printVolunteerList(List<VolunteerDTO> volunteers) {
+        if (volunteers == null || volunteers.isEmpty()) {
+            out.println(VOLUNTEER_EMPTY_MESSAGE);
             return;
         }
-        list.forEach (vt -> {
-            out.println(" -" + vt.getTitle () + ": " + vt.getState ().toString ());
-        });
 
-    }
-    public void printHelp(){
-        out.println("Comandi disponibili:");
-        out.println("  help                                                 - mostra questo messaggio");
-        out.println("  aggiungi luogo                                       - aggiungi un luogo alla lista di luoghi disponibili");
-        out.println("  aggiungi tipo di visita                              - aggiungi un nuovo tipo di visita ad un luogo");
-        out.println("  modifica numero massimo di persone per iscrizione    ");
-        out.println("  inserisci date da precludere                         - inserisci le date da precludere alle visite");
-        out.println("  list places                                          - elenca tutti i luoghi");
-        out.println("  list visit-types per luogo                           - elenca le tipologie di visita con il luogo associato");
-        out.println("  list visit-types per stato                           - elenca le tipologie di visita con lo stato associato");
-        out.println("  list volunteers                                      - elenca i volontari registrati");
-        out.println("  exit                                                 - termina l'applicazione");
+        volunteers.stream()
+                .map(this::format)
+                .forEach(out::println);
     }
 
-    private String format(Object dto){
-        return dto == null ? "<n.d.>" : dto.toString();
+    private String format(PlaceDTO place) {
+        if (place == null) {
+            return "";
+        }
+
+        return ("Luogo: %s%nDescrizione: %s%nUbicazione: %s" + System.lineSeparator())
+                .formatted(
+                        safe(place.getTitle()),
+                        safe(place.getDescription()),
+                        safe(place.getLocation())
+                );
+    }
+
+    private String format(VisitTypeDTO visitType) {
+        if (visitType == null) {
+            return "";
+        }
+
+        return ("Visita: %s%nGiorni: %s%nOrario: %s - %s%nDurata: %d minuti%nTicket richiesto: %s%nPartecipanti: %d-%d" + System.lineSeparator())
+                .formatted(
+                        safe(visitType.getTitle()),
+                        safe(visitType.getDaySummary()),
+                        safe(visitType.getStartTime()),
+                        safe(visitType.getendTime()),
+                        visitType.getDurationMinutes(),
+                        visitType.isTicketRequired() ? "Sì" : "No",
+                        visitType.getMinParticipants(),
+                        visitType.getMaxParticipants(),
+                        visitType.getState ()
+                );
+    }
+
+    private String format(VolunteerDTO volunteer) {
+        if (volunteer == null) {
+            return "";
+        }
+
+        String visits = volunteer.getVisitTypeTitles() == null || volunteer.getVisitTypeTitles().isEmpty()
+                ? "Nessuna visita assegnata"
+                : volunteer.getVisitTypeTitles().stream()
+                .map(this::safe)
+                .collect(Collectors.joining(", "));
+
+        return ("Volontario: %s%nVisite: %s" + System.lineSeparator())
+                .formatted(safe(volunteer.getNickname()), visits);
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
     }
 }
