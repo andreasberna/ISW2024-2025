@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -19,16 +20,18 @@ public class JSONConfiguratorRepository implements ConfiguratorRepository {
 
     public JSONConfiguratorRepository(Path file) {
         this.file = file;
+        this.cache = new HashMap<> ();
         init();
     }
 
     private void init(){
         try{
             if (file.getParent() != null) Files.createDirectories(file.getParent());
-            if(Files.exists(file) && Files.size (file) > 0){
+            if(Files.exists(file) && Files.size (file) > 0) {
                 String json = Files.readString (file);
-                this.cache = JSONSupport.deserializeConfigurator(json);
-            }else this.cache = null;
+                Map<String, Configurator> loaded = JSONSupport.deserializeConfigurator (json);
+                if(loaded != null) cache.putAll (loaded);
+            }
         } catch(IOException e){
             System.err.println("Warn: impossibile leggere " + file + " -> credenziali assenti");
             this.cache = null;
@@ -51,7 +54,7 @@ public class JSONConfiguratorRepository implements ConfiguratorRepository {
 
     @Override
     public Optional<Map<String, Configurator>> load() {
-        return Optional.ofNullable(cache);
+        return cache.isEmpty() ? Optional.empty() : Optional.of(Map.copyOf(cache));
     }
 
     @Override
@@ -63,6 +66,6 @@ public class JSONConfiguratorRepository implements ConfiguratorRepository {
 
     @Override
     public boolean exists() {
-        return cache != null;
+        return !cache.isEmpty();
     }
 }
