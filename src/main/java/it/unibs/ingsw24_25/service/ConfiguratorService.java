@@ -6,6 +6,7 @@ import it.unibs.ingsw24_25.DTO.VolunteerDTO;
 import it.unibs.ingsw24_25.model.TimeSlot;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 public interface ConfiguratorService {
@@ -36,6 +37,11 @@ public interface ConfiguratorService {
 
     List<VisitTypeDTO> listVisitTypeByPlace(String placeId);
 
+    List<VisitTypeDTO> listVisitType();
+
     List<VolunteerDTO> listVolunteerWVisitType();
+
+    void setBlackoutDates(List<LocalDate> excludedDates);
+
 
 }
