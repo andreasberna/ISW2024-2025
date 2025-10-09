@@ -15,8 +15,15 @@ public class VisitType {
     private int maxParticipants;
     private Place place;
     private List<Volunteer> guides;
+    private VisitState state;
+    private LocalDate visitDate;
+    private LocalDate enrollmentDeadline= visitDate.minusDays(3);
+    private int enrolled;
 
-    public VisitType(String visitTitle, String visitDescription, String visitMeetLocation,  LocalDate validFrom, LocalDate validTo, List<TimeSlot> schedules,  Boolean ticketRequired, int minParticipants, int maxParticipants,  Place place, List<Volunteer> guides ) {
+    public VisitType(String visitTitle, String visitDescription, String visitMeetLocation,
+                     LocalDate validFrom, LocalDate validTo, List<TimeSlot> schedules,
+                     Boolean ticketRequired, int minParticipants, int maxParticipants,
+                     Place place, List<Volunteer> guides ) {
         this.visitTitle = visitTitle;
         this.visitDescription = visitDescription;
         this.visitMeetLocation = visitMeetLocation;
@@ -41,6 +48,50 @@ public class VisitType {
     }
     public void removeGuide(Volunteer volunteer){
         this.guides.remove(volunteer);
+    }
+
+    public void addEnrollment(int n){
+        if(state == VisitState.CANCELLATA || state == VisitState.CONFERMATA)
+            throw new IllegalStateException("Iscrizione non consentita in stato: " + state);
+
+        if(enrolled + n > maxParticipants)
+            throw new IllegalStateException("Superato il numero massimo di partecipanti");
+
+        enrolled +=n;
+        updateState(LocalDate.now ());
+    }
+    public void removeEnrollment(int n){
+        if (enrolled - n < 0)
+            throw new IllegalStateException("Numero di cancellazioni non valido");
+
+        enrolled -=n;
+        updateState(LocalDate.now());
+    }
+
+    public void updateState(LocalDate today){
+        LocalDate deadline = visitDate.minusDays (3);
+
+        switch (state) {
+            case PROPOSTA -> {
+                if(enrolled == maxParticipants) state = VisitState.COMPLETA;
+                else if(today.isEqual (deadline)){
+                    if (enrolled >= minParticipants) state = VisitState.CONFERMATA;
+                    else state = VisitState.CANCELLATA;
+                }
+            }
+            case COMPLETA -> {
+                if(enrolled < minParticipants & today.isBefore (deadline))
+                    state = VisitState.PROPOSTA;
+                else if(today.isEqual (deadline)){
+                    if (enrolled >= minParticipants) state = VisitState.CONFERMATA;
+                    else state = VisitState.CANCELLATA;
+                }
+            }
+            case CONFERMATA -> {
+                if (!today.isEqual (visitDate)) state = VisitState.EFFETTUATA;
+            }
+
+        }
     }
 
 
@@ -110,6 +161,11 @@ public class VisitType {
     public void setGuides(List<Volunteer> guides) {
         this.guides = guides;
     }
-
+    public VisitState getState() {
+        return state;
+    }
+    public int getEnrolled() {
+        return enrolled;
+    }
 
 }
