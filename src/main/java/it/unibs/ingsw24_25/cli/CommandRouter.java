@@ -16,12 +16,13 @@ public class CommandRouter {
     public CommandRouter(CommandHandler handler) {
         this();
         Objects.requireNonNull (handler, "CommandHandler non può essere nullo");
-        register("1", handler::listPlaces);
-        register("2", handler::listVisitTypeByPlace);
-        register("3", handler::listVisitTypeWithState);
-        register("4", handler::listVolunteer);
-        register("5", handler::setBlackOutDates);
-        register ("6", handler::setMaxPeoplePerSub);
+        register("1", handler::openSetupMenu);
+        register("setup", handler::openSetupMenu);
+        register("2", handler::openListMenu);
+        register("list", handler::openListMenu);
+        register("3", handler::openSettingsMenu);
+        register("settings", handler::openSettingsMenu);
+
     }
 
     public CommandRouter register(String command, BooleanSupplier handler) {

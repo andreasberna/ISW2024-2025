@@ -3,26 +3,62 @@ package it.unibs.ingsw24_25.cli;
 import it.unibs.ingsw24_25.DTO.PlaceDTO;
 import it.unibs.ingsw24_25.DTO.VisitTypeDTO;
 import it.unibs.ingsw24_25.DTO.VolunteerDTO;
+import it.unibs.ingsw24_25.model.TimeSlot;
 import it.unibs.ingsw24_25.service.ConfiguratorService;
 import it.unibs.ingsw24_25.util.ExcludedDatePolicy;
 
-import java.time.LocalDate;
-import java.time.YearMonth;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 public class CommandHandler {
-    private static final String PLACE_SELECTION_PROMPT = "Inserisci il titolo del luogo di cui visualizzare le visite: ";
+    private static final String MENU_SEPARATOR = "-----------------------";
+    private static final String DEFAULT_PROMPT = "> ";
+    private static final String BACK_COMMAND = "back";
+
+    private static final String INVALID_COMMAND_MESSAGE = "Comando non valido";
     private static final String ERROR_PREFIX = "Errore: ";
-    private static final String PRECLUDED_DATES_PROMPT = "Inserisci le date precluse separate da virgola (formato yyyy-MM-dd): ";
-    private static final String MAX_PEOPLE_PROMPT = "Inserisci il numero massimo di persone per iscrizione: ";
-    private static final String INVALID_NUMBER_MESSAGE = "Inserire un numero intero valido.";
+
+    private static final String PLACE_SELECTION_PROMPT = "Inserisci il titolo del luogo di cui visualizzare le visite: ";
+    private static final String PLACE_NAME_PROMPT = "Inserisci il nome del luogo: ";
+    private static final String PLACE_DESCRIPTION_PROMPT = "Inserisci la descrizione del luogo: ";
+    private static final String PLACE_LOCATION_PROMPT = "Inserisci la localizzazione del luogo: ";
+
+    private static final String VISIT_PLACE_PROMPT = "Inserisci nome del luogo relativo alla visita: ";
+    private static final String VISIT_TITLE_PROMPT = "Inserisci il titolo della visita: ";
+    private static final String VISIT_DESCRIPTION_PROMPT = "Inserisci la descrizione della visita: ";
+    private static final String VISIT_MEETING_PROMPT = "Inserisci il luogo di ritrovo: ";
+    private static final String VISIT_DAY_PROMPT = "Giorno della settimana (1=Lunedì ... 7=Domenica): ";
+    private static final String VISIT_START_PROMPT = "Orario di inizio (HH:mm): ";
+    private static final String VISIT_DURATION_PROMPT = "Durata in minuti: ";
+    private static final String VISIT_ANOTHER_SLOT_PROMPT = "Aggiungere un altro orario? (si/no): ";
+    private static final String VISIT_TICKET_PROMPT = "La visita richiede un ticket? (si/no): ";
+    private static final String VISIT_MIN_PROMPT = "Numero minimo di partecipanti: ";
+    private static final String VISIT_MAX_PROMPT = "Numero massimo di partecipanti: ";
+    private static final String VISIT_VALID_FROM_PROMPT = "Data di inizio validità (yyyy-MM-dd): ";
+    private static final String VISIT_VALID_TO_PROMPT = "Data di fine validità (yyyy-MM-dd): ";
+    private static final String VISIT_INVALID_DATE_RANGE = "La data di fine non può essere precedente alla data di inizio.";
+
+    private static final String VOLUNTEER_PROMPT = "Inserisci il nickname del volontario: ";
+    private static final String VOLUNTEER_SUCCESS = "Volontario inserito con successo.";
+    private static final String VOLUNTEER_LINK_VISIT_PROMPT = "Inserisci il titolo della visita da associare: ";
+    private static final String VOLUNTEER_LINK_SUCCESS = "Associazione completata.";
+
     private static final String PRECLUDED_DATES_SUCCESS = "Date precluse aggiornate.";
+    private static final String PRECLUDED_DATES_INVALID_FORMAT = "Formato data non valido: %s. Usa yyyy-MM-dd";
+    private static final String MAX_PEOPLE_PROMPT = "Inserisci il numero massimo di persone per iscrizione: ";
     private static final String MAX_PEOPLE_SUCCESS = "Numero massimo di persone per iscrizione aggiornato.";
+    private static final String INVALID_NUMBER_MESSAGE = "Inserire un numero intero valido.";
+
+    private static final String CLEAR_TOKEN = "-";
+    private static final String CLEAR_TOKEN_ALT = "nessuna";
+
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
     private static final DateTimeFormatter YEAR_MONTH_FORMATTER = DateTimeFormatter.ofPattern("MM yyyy", Locale.ITALIAN);
 
     private final ConfiguratorService service;
@@ -38,19 +74,86 @@ public class CommandHandler {
     public boolean handle(String command){
         if (command == null) return false;
 
-        String normalized = command.trim();
+        String normalized = command.trim().toLowerCase(Locale.ITALIAN);
         if(normalized.isEmpty()) return false;
 
         return switch (normalized){
-            case "1" -> listPlaces();
-            case "2" -> listVisitTypeByPlace();
-            case "3" -> listVisitTypeWithState();
-            case "4" -> listVolunteer();
-            case "5" -> setBlackOutDates();
-            case "6" -> setMaxPeoplePerSub();
+            case "setup", "1" -> openSetupMenu();
+            case "list", "2" -> openListMenu();
+            case "settings", "3" -> openSettingsMenu();
             default  -> false;
         };
     }
+
+    public boolean openSetupMenu(){
+        boolean stayInMenu = true;
+        while(stayInMenu){
+            printer.println (MENU_SEPARATOR);
+            printer.println ("Menu setup: ");
+            printer.println ("1 - Aggiungi luogo");
+            printer.println ("2 - Aggiungi visita");
+            printer.println ("3 - aggiungi volontario");
+            printer.println ("4 - Associa volontario a visita");
+            printer.println ("back - Torna al menù principale");
+            printer.println ("Menu setup: ");
+
+            String choice = reader.readLine (DEFAULT_PROMPT).toLowerCase(Locale.ITALIAN);
+            switch (choice){
+                case "1" -> addPlace ();
+                case "2" -> addVisitType();
+                case "3" -> addVolunteer ();
+                case "4" -> linkVolunteerToVisit();
+                case BACK_COMMAND -> stayInMenu = false;
+                default -> printer.println (INVALID_COMMAND_MESSAGE);
+            }
+        }
+        return true;
+    }
+    public boolean openListMenu(){
+        boolean stayInMenu = true;
+        while (stayInMenu) {
+            printer.println(MENU_SEPARATOR);
+            printer.println("Menu liste");
+            printer.println("1 - Visualizza luoghi");
+            printer.println("2 - Visualizza visite per luogo");
+            printer.println("3 - Visualizza visite con stato");
+            printer.println("4 - Visualizza volontari");
+            printer.println("back - Torna al menu principale");
+            printer.println(MENU_SEPARATOR);
+
+            String choice = reader.readLine(DEFAULT_PROMPT).toLowerCase(Locale.ITALIAN);
+            switch (choice) {
+                case "1" -> listPlaces();
+                case "2" -> listVisitTypeByPlace();
+                case "3" -> listVisitTypeWithState();
+                case "4" -> listVolunteer();
+                case BACK_COMMAND -> stayInMenu = false;
+                default -> printer.println(INVALID_COMMAND_MESSAGE);
+            }
+        }
+        return true;
+    }
+    public boolean openSettingsMenu(){
+        boolean stayInMenu = true;
+        while (stayInMenu) {
+            printer.println(MENU_SEPARATOR);
+            printer.println("Menu impostazioni");
+            printer.println("1 - Imposta date precluse");
+            printer.println("2 - Imposta max persone per iscrizione");
+            printer.println("back - Torna al menu principale");
+            printer.println(MENU_SEPARATOR);
+
+            String choice = reader.readLine(DEFAULT_PROMPT).toLowerCase(Locale.ITALIAN);
+            switch (choice) {
+                case "1" -> setBlackOutDates();
+                case "2" -> setMaxPeoplePerSub();
+                case BACK_COMMAND -> stayInMenu = false;
+                default -> printer.println(INVALID_COMMAND_MESSAGE);
+            }
+        }
+        return true;
+    }
+
 
     public boolean listPlaces(){
         printer.println (Printer.PLACE_HEADER);
@@ -93,10 +196,10 @@ public class CommandHandler {
     }
 
     public boolean setBlackOutDates(){
-        List<String> rawDates = reader.readValues(PRECLUDED_DATES_PROMPT, null);
+        List<String> rawDates = reader.readValues(buildExcludedDatesPrompt(), null);
         if(rawDates.size () == 1){
-            String token = rawDates.get(0);
-            if("-".equals(token) || "nessuna".equals(token)){
+            String token = rawDates.get(0).toLowerCase (Locale.ITALIAN);
+            if(CLEAR_TOKEN.equals(token) || CLEAR_TOKEN_ALT.equals(token)){
                 rawDates = List.of();
             }
         }
@@ -106,17 +209,19 @@ public class CommandHandler {
                 service.setBlackoutDates (List.of());
                 printer.println (PRECLUDED_DATES_SUCCESS);
             }catch(IllegalArgumentException | IllegalStateException ex) {
-                printer.println(ERROR_PREFIX + "Formato non valido: " + rawDates + ". Usa dd-mm-yyyy");
-                return true;
+                printer.println(ERROR_PREFIX + safeMessage(ex));
             }
+            return true;
         };
+
+
 
         List<LocalDate> dates = new ArrayList<> ();
         for (String rawDate : rawDates){
             try{
                 dates.add(LocalDate.parse(rawDate, DATE_FORMATTER));
             }catch(DateTimeParseException ex){
-                printer.println(ERROR_PREFIX + "Formato data non valido: " + rawDate + ". Usa gg-mm-yyyy");
+                printer.println(ERROR_PREFIX + PRECLUDED_DATES_INVALID_FORMAT.formatted (rawDate));
                 return true;
             }
         }
@@ -159,4 +264,167 @@ public class CommandHandler {
         String message = ex.getMessage();
         return message == null ? "" : message;
     }
+
+    private void addPlace(){
+        try {
+            String title = Objects.requireNonNull (reader.readLine (PLACE_NAME_PROMPT));
+            String description = Objects.requireNonNull (reader.readLine (PLACE_DESCRIPTION_PROMPT));
+            String location = Objects.requireNonNull (reader.readLine (PLACE_LOCATION_PROMPT));
+            String result = service.addPlace (title, description, location);
+            printer.println (result);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            printer.println (ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+    private void addVisitType(){
+        try {
+            String placeId = Objects.requireNonNull (reader.readLine (VISIT_PLACE_PROMPT));
+            String title = Objects.requireNonNull (reader.readLine (VISIT_TITLE_PROMPT));
+            String description = Objects.requireNonNull (reader.readLine (VISIT_DESCRIPTION_PROMPT));
+            String meetingLocation = Objects.requireNonNull (reader.readLine (VISIT_MEETING_PROMPT));
+            List<TimeSlot> schedules = readVisitSchedules ();
+            boolean ticketRequired = reader.readBoolean (VISIT_TICKET_PROMPT);
+            int minParticipants = readPositiveInt (VISIT_MIN_PROMPT);
+            int maxParticipants = readMaxParticipants (minParticipants);
+            LocalDate validFrom = readDate (VISIT_VALID_FROM_PROMPT);
+            LocalDate validTo = readDate (VISIT_VALID_TO_PROMPT);
+            if (validTo.isBefore (validFrom)) {
+                printer.println (ERROR_PREFIX + VISIT_INVALID_DATE_RANGE);
+                return;
+            }
+
+            String result = service.addVisitType (
+                    placeId,
+                    title,
+                    description,
+                    meetingLocation,
+                    schedules,
+                    ticketRequired,
+                    minParticipants,
+                    maxParticipants,
+                    validFrom,
+                    validTo
+            );
+            printer.println (result);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            printer.println (ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+    private List<TimeSlot> readVisitSchedules(){
+        List<TimeSlot> schedules = new ArrayList<>();
+        printer.println ("Configura gli orari della visita");
+        boolean addMore;
+        do{
+            DayOfWeek day = readDayOfWeek();
+            LocalTime startTime = readTime(VISIT_START_PROMPT);
+            int durationMinutes = readPositiveInt(VISIT_DURATION_PROMPT);
+            schedules.add (new TimeSlot (day, startTime, Duration.ofMinutes (durationMinutes)));
+            addMore = reader.readBoolean (VISIT_ANOTHER_SLOT_PROMPT);
+        } while (addMore);
+        return schedules;
+    }
+
+    private DayOfWeek readDayOfWeek(){
+        while(true){
+            String value = reader.readLine (VISIT_DAY_PROMPT);
+            try{
+                int numeric = Integer.parseInt(value);
+                if(numeric >= 1 && numeric <= 7){
+                    return DayOfWeek.of(numeric);
+                }
+            } catch(NumberFormatException ignored){}
+
+            String normalized = value.trim().toLowerCase (Locale.ITALIAN).replace ('ì', 'i');
+            switch (normalized){
+                case "lunedi", "lun", "monday" -> {
+                    return DayOfWeek.MONDAY;
+                }
+
+                case "martedi", "mar", "tuesday" -> {
+                    return DayOfWeek.TUESDAY;
+                }
+
+                case "mercoledi", "mer", "wednesday" -> {
+                    return DayOfWeek.WEDNESDAY;
+                }
+
+                case "giovedi", "gio", "thursday" -> {
+                    return DayOfWeek.THURSDAY;
+                }
+
+                case "venerdi", "ven", "friday" -> {
+                    return DayOfWeek.FRIDAY;
+                }
+                case "sabato", "sab", "saturday" -> {
+                    return DayOfWeek.SATURDAY;
+                }
+                case "domenica", "dom", "sunday" -> {
+                    return DayOfWeek.SUNDAY;
+                }
+                default -> {
+                    printer.println(ERROR_PREFIX + "Giorno non valido. Usa un numero tra 1 e 7 o il nome del giorno.");
+                }
+            }
+        }
+    }
+    private LocalTime readTime(String prompt) {
+        while (true){
+            String value = reader.readLine (prompt);
+            try{
+                return LocalTime.parse(value, TIME_FORMATTER);
+            } catch(DateTimeParseException ex){
+                printer.println(ERROR_PREFIX + "Fromato orario non valido. Usa HH:mm");
+            }
+        }
+    }
+    private int readPositiveInt(String prompt) {
+        while (true){
+            String value = reader.readLine (prompt);
+            try{
+                int parsed = Integer.parseInt (value);
+                if (parsed > 0) return parsed;
+            } catch(NumberFormatException ex){}
+
+            printer.println(ERROR_PREFIX + INVALID_NUMBER_MESSAGE);
+        }
+    }
+    private int readMaxParticipants(int minParticipants){
+        while (true){
+            int maxParticipants = readPositiveInt (VISIT_MAX_PROMPT);
+            if (maxParticipants >= minParticipants) return maxParticipants;
+            printer.println(ERROR_PREFIX + "Il numero massimo di iscrizioni deve essere maggiore o uguale al minimo indicato");
+        }
+    }
+    private LocalDate readDate (String prompt) {
+        while (true){
+            String value = reader.readLine (prompt);
+            try{
+                return LocalDate.parse(value, DATE_FORMATTER);
+            } catch(DateTimeParseException ex){
+                printer.println (ERROR_PREFIX + PRECLUDED_DATES_INVALID_FORMAT.formatted (value));
+            }
+        }
+    }
+
+    private void addVolunteer(){
+        try {
+            String nickname = Objects.requireNonNull (reader.readLine (VOLUNTEER_PROMPT));
+            service.addVolunteer (nickname);
+            printer.println (VOLUNTEER_SUCCESS);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            printer.println (ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+
+    private void linkVolunteerToVisit(){
+        try {
+            String nickname = Objects.requireNonNull (reader.readLine (VOLUNTEER_PROMPT));
+            String visitTitle = Objects.requireNonNull (reader.readLine (VOLUNTEER_LINK_VISIT_PROMPT));
+            service.linkVOlunteerToVisit (nickname, visitTitle);
+            printer.println (VOLUNTEER_LINK_SUCCESS);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            printer.println (ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+
 }

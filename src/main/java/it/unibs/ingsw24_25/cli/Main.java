@@ -24,10 +24,32 @@ public class Main {
         FirstAccessSetup setup = new FirstAccessSetup (service, reader, printer);
         setup.run();
 
+        requireLogin(service, reader, printer);
+
         CommandHandler handler = new CommandHandler (service, printer, reader);
         CommandRouter router = new CommandRouter (handler);
         CliApp cliApp = new CliApp(reader, printer, router);
         cliApp.run();
+    }
+
+    private static void requireLogin(ConfiguratorService service, PromptReader reader, Printer printer) {
+        if (service.isFirstAccessPending ()) return;
+
+        printer. println ("-----------------------");
+        printer.println ("Autenticazione configuratore richiesta");
+        printer. println ("-----------------------");
+
+        boolean auhenticated = false;
+        while (!auhenticated) {
+            String nickname = reader.readLine ("Nickname: ");
+            String password = reader.readLine ("Password: ");
+            if (service.verifyLogin (nickname, password)) {
+                printer.println ("Accesso effettuato.");
+                auhenticated = true;
+            } else {
+                printer.println ("Credenziali non valide. Riprova");
+            }
+        }
     }
 
     private static ConfiguratorService buildService() {

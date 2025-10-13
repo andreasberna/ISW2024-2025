@@ -57,12 +57,9 @@ public class CliApp implements Runnable {
     private void showMenu(){
         printer.println(MENU_SEPARATOR);
         printer.println("Scegli un'opzione");
-        printer.println("1 - Visualizza luoghi");
-        printer.println("2 - Visualizza visite per luogo");
-        printer.println("3 - Visualizza visite con stato visita");
-        printer.println("4 - Visualizza volontari");
-        printer.println("5 - Imposta date precluse");
-        printer.println("6 - Imposta max persone per iscrizione");
+        printer.println("setup     - Inserisci luoghi, visite e volontari");
+        printer.println("list      - Visualizza le informazioni registrate");
+        printer.println("settings  - Configura i parametri di servizio");
         printer.println("exit - Esci");
         printer.println(MENU_SEPARATOR);
     }

@@ -28,7 +28,7 @@ public class PromptReader {
               }
               return trimmed;
           }catch(IllegalStateException e){
-              System.out.println("Errore di lettura, rirpovare.");
+              System.out.println("Errore di lettura, riprovare.");
           }catch(NoSuchElementException e){
               System.out.println("Input non disponibile, riprovare.");
           }

@@ -9,11 +9,13 @@ public class FirstAccessSetup {
     private static final String INTRO_MESSAGE = "Configurazione iniziale richiesta.";
     private static final String DEFAULT_NICK_PROMPT = "Inserisci il nickname di default: ";
     private static final String DEFAULT_PASS_PROMPT = "Inserisci la password di default: ";
+    private static final String DEFAULT_CREDENTIALS_SUCCESS = "Credenziali di default verificate";
     private static final String PERSONAL_NICK_PROMPT = "Imposta un nuovo nickname amministratore: ";
     private static final String PERSONAL_PASS_PROMPT = "Imposta una nuova password amministratore: ";
     private static final String TERRITORIAL_SCOPE_PROMPT = "Definisci l'ambito territoriale del servizio: ";
     private static final String MAX_PEOPLE_PROMPT = "Imposta il numero massimo di partecipanti per iscrizione: ";
     private static final String ERROR_PREFIX = "Errore: ";
+    private static final String PERSONAL_CREDENTIALS_SUCCESS = "Credenziali amministratore impostate.";
     private static final String COMPLETION_MESSAGE = "Configurazione iniziale completata.";
 
     private final ConfiguratorService service;
@@ -46,10 +48,11 @@ public class FirstAccessSetup {
     private void verifyDefaultCredentials(){
         boolean verified = false;
         while(!verified){
-            String nickname = reader.readLine (PERSONAL_NICK_PROMPT);
-            String password = reader.readLine (PERSONAL_PASS_PROMPT);
+            String nickname = reader.readLine (DEFAULT_NICK_PROMPT);
+            String password = reader.readLine (DEFAULT_PASS_PROMPT);
             try{
-                service.setPersonalCredentials(nickname, password);
+                service.verifyDefaultCredentials(nickname, password);
+                printer.println (DEFAULT_CREDENTIALS_SUCCESS);
                 verified = true;
             } catch (IllegalArgumentException | IllegalStateException e){
                 printer.println(ERROR_PREFIX + safeMessage(e));
@@ -64,6 +67,7 @@ public class FirstAccessSetup {
             String password = reader.readLine (PERSONAL_PASS_PROMPT);
             try{
                 service.setPersonalCredentials(nickname, password);
+                printer.println(PERSONAL_CREDENTIALS_SUCCESS);
                 stored = true;
             } catch(IllegalArgumentException | IllegalStateException e){
                 printer.println( ERROR_PREFIX + safeMessage(e));

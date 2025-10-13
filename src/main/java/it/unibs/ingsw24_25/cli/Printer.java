@@ -3,6 +3,7 @@ package it.unibs.ingsw24_25.cli;
 import it.unibs.ingsw24_25.DTO.PlaceDTO;
 import it.unibs.ingsw24_25.DTO.VisitTypeDTO;
 import it.unibs.ingsw24_25.DTO.VolunteerDTO;
+import it.unibs.ingsw24_25.model.VisitState;
 
 import java.io.PrintStream;
 import java.util.List;
@@ -82,7 +83,7 @@ public class Printer {
             return "";
         }
 
-        return ("Visita: %s%nGiorni: %s%nOrario: %s - %s%nDurata: %d minuti%nTicket richiesto: %s%nPartecipanti: %d-%d" + System.lineSeparator())
+        return ("Visita: %s%nGiorni: %s%nOrario: %s - %s%nDurata: %d minuti%nTicket richiesto: %s%nPartecipanti: %d-%d%nStato: %s" + System.lineSeparator())
                 .formatted(
                         safe(visitType.getTitle()),
                         safe(visitType.getDaySummary()),
@@ -92,7 +93,7 @@ public class Printer {
                         visitType.isTicketRequired() ? "Sì" : "No",
                         visitType.getMinParticipants(),
                         visitType.getMaxParticipants(),
-                        visitType.getState ()
+                        formatState(visitType.getState ())
                 );
     }
 
@@ -113,5 +114,17 @@ public class Printer {
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private String formatState(VisitState visit){
+        if (visit == null) { return "non specificato";}
+
+        return switch(visit) {
+            case PROPOSTA -> "Proposta";
+            case COMPLETA -> "Completa";
+            case CONFERMATA -> "Confermata";
+            case CANCELLATA -> "Cancellata";
+            case EFFETTUATA ->  "Effettata";
+        };
     }
 }
