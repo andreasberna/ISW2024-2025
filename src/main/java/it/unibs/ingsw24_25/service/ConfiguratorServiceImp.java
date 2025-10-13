@@ -67,7 +67,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
     @Override
     public boolean verifyLogin(String nickname, String password) {
         if (nickname == null || password == null) return false;
-        if (!isFirstAccessPending()) return false;
+        if (isFirstAccessPending()) return false;
 
         String normalizedNickname= nickname.trim ();
         String normalizedPassword = password.trim ();
