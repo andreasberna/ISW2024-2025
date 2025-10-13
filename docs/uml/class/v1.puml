@@ -37,6 +37,7 @@ class Volunteer {
   + setVisitsAttending(visits: List<VisitType>)
   + addVisit(visit: VisitType)
   + removeVisit(visit: VisitType)
+  - ensureVisitInitialized(): List<VisitType>
 }
 
 class TimeSlot {
@@ -68,6 +69,7 @@ class Place {
   + setVisits(visits: List<VisitType>)
   + addVisit(visit: VisitType)
   + removeVisit(visit: VisitType)
+  -ensureVisitInitialized(): List<VisitType>
 }
 
 class VisitType {
@@ -193,6 +195,8 @@ class JSONSettingsRepository {
   + save(settings: SystemSettings)
   + exists(): boolean
   + updateMaxPeoplePerSubscription(newValue: int)
+  - init()
+  - persist()
 }
 
 interface VolunteerRepository {
@@ -210,6 +214,8 @@ class JSONVolunteerRepository {
   + findAll(): List<Volunteer>
   + save(volunteer: Volunteer)
   + deleteByNickname(nickname: String)
+  - init()
+  - persist()
 }
 
 interface VisitTypeRepository {
@@ -231,6 +237,8 @@ class JSONVisitTypeRepository {
   + findAll(): List<VisitType>
   + save(visitType: VisitType)
   + deleteById(id: String)
+  - init()
+  - persist()
 }
 
 interface PlaceRepository {
@@ -248,6 +256,8 @@ class JSONPlaceRepository {
   + findAll(): List<Place>
   + save(place: Place)
   + deleteById(id: String)
+  - init()
+  - persist()
 }
 
 interface ConfiguratorRepository {
@@ -263,6 +273,9 @@ class JSONConfiguratorRepository {
   + load(): Optional<Map<String, Configurator>>
   + save(configurator: Configurator)
   + exists(): boolean
+  - init()
+  - persist()
+
 }
 }
 
@@ -288,8 +301,8 @@ interface ConfiguratorService {
 }
 
 class ConfiguratorServiceImp {
-  - DEFAULT_NICKNAME: String
-  - DEFAULT_PASSWORD: String
+  {static} - DEFAULT_NICKNAME: String
+  {static} - DEFAULT_PASSWORD: String
   - placeRepository: PlaceRepository
   - visitTypeRepository: VisitTypeRepository
   - volunteerRepository: VolunteerRepository
@@ -316,6 +329,9 @@ class ConfiguratorServiceImp {
   + listVisitType(): List<VisitTypeDTO>
   + listVolunteerWVisitType(): List<VolunteerDTO>
   + setBlackoutDates(dates: List<LocalDate>)
+  - requireNonBlank(value: String, message: String): String
+  - sanitizedExcludedDates(dates: List<LocalDate>): List<LocalDate>
+  - ensureAllowedMonth(dates: List<LocalDate>)
 }
 }
 
@@ -324,9 +340,17 @@ class DTOMapper <<static>> {
   + placeToDTO(p: Place): PlaceDTO
   + visitTypeToDTO(vt: VisitType): VisitTypeDTO
   + volunteerToDTO(v: Volunteer): VolunteerDTO
+  - summarizeDays(slots: List<TimeSlot>): String
+  - startTimeString(vt: VisitType): String
+  - endTimeString(vt: VisitType): String
+  - durationMinutes(vt: VisitType): int
 }
 
 class JSONSupport <<static>> {
+  - LocalDateAdapter
+  - LocalTimeAdapter
+  - YearMonthAdapter
+  - DurationAdapter
   + serializeConfigurator(map: Map<String, Configurator>): String
   + deserializeConfigurator(json: String): Map<String, Configurator>
   + serializeVolunteerMap(map: Map<String, Volunteer>): String
@@ -337,6 +361,7 @@ class JSONSupport <<static>> {
   + deserializeVisitTypeMap(json: String): Map<String, VisitType>
   + serializeSystemSettings(settings: SystemSettings): String
   + deserializeSystemSettings(json: String): SystemSettings
+  - isBlank(json: String): boolean
 }
 
 class ExcludedDatePolicy <<static>> {
@@ -346,6 +371,7 @@ class ExcludedDatePolicy <<static>> {
 
 package "cli" {
 class PromptReader {
+  {static} - DEFAULT_SEPARATOR: String
   - scanner: Scanner
   + PromptReader(scanner: Scanner)
   + readLine(prompt: String): String
@@ -354,6 +380,12 @@ class PromptReader {
 }
 
 class Printer {
+  {static} + PLACE_HEADER: String
+  {static} + PLACE_EMPTY_MESSAGE: String
+  {static} + VISIT_TYPE_HEADER: String
+  {static} + VISIT_TYPE_EMPTY_MESSAGE: String
+  {static} + VOLUNTEER_HEADER: String
+  {static} + VOLUNTEER_EMPTY_MESSAGE: String
   - out: PrintStream
   + Printer(out: PrintStream)
   + println(text: String)
@@ -361,20 +393,77 @@ class Printer {
   + printPlaceList(places: List<PlaceDTO>)
   + printVisitTypeList(visitTypes: List<VisitTypeDTO>)
   + printVolunteerList(volunteers: List<VolunteerDTO>)
+  - format(place: PlaceDTO): String
+  - format(visitType: VisitTypeDTO): String
+  - format(volunteer: VolunteerDTO): String
+  - formatState(visit: VisitState): String
+  - safe(value: String): String
 }
 
 class CommandHandler {
+  {static} - MENU_SEPARATOR: String
+  {static} - DEFAULT_PROMPT: String
+  {static} - BACK_COMMAND: String
+  {static} - INVALID_COMMAND_MESSAGE: String
+  {static} - ERROR_PREFIX: String
+  {static} - PLACE_SELECTION_PROMPT: String
+  {static} - PLACE_NAME_PROMPT: String
+  {static} - PLACE_DESCRIPTION_PROMPT: String
+  {static} - PLACE_LOCATION_PROMPT: String
+  {static} - VISIT_PLACE_PROMPT: String
+  {static} - VISIT_TITLE_PROMPT: String
+  {static} - VISIT_DESCRIPTION_PROMPT: String
+  {static} - VISIT_MEETING_PROMPT: String
+  {static} - VISIT_DAY_PROMPT: String
+  {static} - VISIT_START_PROMPT: String
+  {static} - VISIT_DURATION_PROMPT: String
+  {static} - VISIT_ANOTHER_SLOT_PROMPT: String
+  {static} - VISIT_TICKET_PROMPT: String
+  {static} - VISIT_MIN_PROMPT: String
+  {static} - VISIT_MAX_PROMPT: String
+  {static} - VISIT_VALID_FROM_PROMPT: String
+  {static} - VISIT_VALID_TO_PROMPT: String
+  {static} - VISIT_INVALID_DATE_RANGE: String
+  {static} - VOLUNTEER_PROMPT: String
+  {static} - VOLUNTEER_SUCCESS: String
+  {static} - VOLUNTEER_LINK_VISIT_PROMPT: String
+  {static} - VOLUNTEER_LINK_SUCCESS: String
+  {static} - PRECLUDED_DATES_SUCCESS: String
+  {static} - PRECLUDED_DATES_INVALID_FORMAT: String
+  {static} - MAX_PEOPLE_PROMPT: String
+  {static} - MAX_PEOPLE_SUCCESS: String
+  {static} - INVALID_NUMBER_MESSAGE: String
+  {static} - CLEAR_TOKEN: String
+  {static} - CLEAR_TOKEN_ALT: String
+  {static} - DATE_FORMATTER: DateTimeFormatter
+  {static} - TIME_FORMATTER: DateTimeFormatter
+  {static} - YEAR_MONTH_FORMATTER: DateTimeFormatter
   - service: ConfiguratorService
   - printer: Printer
   - reader: PromptReader
   + CommandHandler(service: ConfiguratorService, printer: Printer, prompt: PromptReader)
   + handle(command: String): boolean
+  + openSetupMenu(): boolean
+  + openListMenu(): boolean
+  + openSettingsMenu(): boolean
   + listPlaces(): boolean
   + listVisitTypeByPlace(): boolean
   + listVisitTypeWithState(): boolean
   + listVolunteer(): boolean
   + setBlackOutDates(): boolean
   + setMaxPeoplePerSub(): boolean
+  - buildExcludedDatesPrompt(): String
+  - safeMessage(ex: RuntimeException): String
+  - addPlace()
+  - addVisitType()
+  - readVisitSchedules(): List<TimeSlot>
+  - readDayOfWeek(): DayOfWeek
+  - readTime(prompt: String): LocalTime
+  - readPositiveInt(prompt: String): int
+  - readMaxParticipants(minParticipants: int): int
+  - readDate(prompt: String): LocalDate
+  - addVolunteer()
+  - linkVolunteerToVisit()
 }
 
 class CommandRouter {
@@ -386,7 +475,11 @@ class CommandRouter {
   + normalize(command: String): String
 }
 
-class CliApp {
+class CliApp  <<Runnable>> {
+  {static} - DEFAULT_PROMPT: String
+  {static} - EXIT_COMMAND: String
+  {static} - INVALID_COMMAND_MESSAGE: String
+  {static} - MENU_SEPARATOR: String
   - reader: PromptReader
   - printer: Printer
   - router: CommandRouter
@@ -396,18 +489,44 @@ class CliApp {
   + start()
   + stop()
   + isRunning(): boolean
+  - executeCommand(command: String)
+  - showMenu()
 }
 
 class FirstAccessSetup {
+  {static} - MENU_SEPARATOR: String
+  {static} - INTRO_MESSAGE: String
+  {static} - DEFAULT_NICK_PROMPT: String
+  {static} - DEFAULT_PASS_PROMPT: String
+  {static} - DEFAULT_CREDENTIALS_SUCCESS: String
+  {static} - PERSONAL_NICK_PROMPT: String
+  {static} - PERSONAL_PASS_PROMPT: String
+  {static} - TERRITORIAL_SCOPE_PROMPT: String
+  {static} - MAX_PEOPLE_PROMPT: String
+  {static} - ERROR_PREFIX: String
+  {static} - PERSONAL_CREDENTIALS_SUCCESS: String
+  {static} - COMPLETION_MESSAGE: String
   - service: ConfiguratorService
   - reader: PromptReader
   - printer: Printer
   + FirstAccessSetup(service: ConfiguratorService, reader: PromptReader, printer: Printer)
   + run()
+  - verifyDefaultCredentials()
+  - setPersonalCredentials()
+  - configureTerritorialScope()
+  - configureMaxParticipants()
+  - safeMessage(ex: RuntimeException): String
 }
 
 class Main {
-  + main(args: String[])
+  {static} - DATA_DIRECTORY: Path
+  {static} - PLACES_FILE: Path
+  {static} - VISIT_TYPES_FILE: Path
+  {static} - VOLUNTEERS_FILE: Path
+  {static} - SETTINGS_FILE: Path
+  {static} - CONFIGURATORS_FILE: Path
+  {static} + main(args: String[])
+  {static} - requireLogin(service: ConfiguratorService, reader: PromptReader, printer: Printer)
   {static} - buildService(): ConfiguratorService
 }
 }
@@ -440,6 +559,9 @@ ConfiguratorServiceImp ..> Place
 ConfiguratorServiceImp ..> VisitType
 ConfiguratorServiceImp ..> Volunteer
 ConfiguratorServiceImp ..> SystemSettings
+ConfiguratorServiceImp ..> LocalDate
+ConfiguratorServiceImp ..> YearMonth
+
 
 ' Repository implementations
 SettingsRepository <|.. JSONSettingsRepository
@@ -461,9 +583,13 @@ CommandHandler ..> PlaceDTO
 CommandHandler ..> VisitTypeDTO
 CommandHandler ..> VolunteerDTO
 CommandHandler ..> ExcludedDatePolicy
+CommandHandler ..> TimeSlot
+CommandHandler ..> DayOfWeek
+CommandHandler ..> Duration
 CommandHandler ..> LocalDate
+CommandHandler ..> LocalTime
 CommandHandler ..> YearMonth
-
+CommandHandler ..> DateTimeFormatter
 CommandRouter --> CommandHandler
 CliApp --> PromptReader
 CliApp --> Printer
