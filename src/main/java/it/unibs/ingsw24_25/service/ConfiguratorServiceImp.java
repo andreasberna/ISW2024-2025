@@ -39,13 +39,13 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
     }
 
     @Override
-    public boolean isFirstAccessPending() {
+    public boolean isFirstAccessPending(String nickname) {
         return !configuratorRepository.exists ();
     }
 
     @Override
     public void verifyDefaultCredentials(String nickname, String password) {
-        if(!isFirstAccessPending())
+        if(!isFirstAccessPending(nickname))
             throw new IllegalStateException("Le credenziali personali sono già state impostate");
         if(!DEFAULT_NICKNAME.equals(nickname) || !DEFAULT_PASSWORD.equals(password))
             throw new IllegalArgumentException ("Credenziali di primo accesso non valide");
@@ -55,7 +55,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
 
     @Override
     public void setPersonalCredentials(String nickname, String password) {
-        if (!isFirstAccessPending()) throw new IllegalStateException ("Le credenziali sono già state configurate");
+        if (!isFirstAccessPending(nickname)) throw new IllegalStateException ("Le credenziali sono già state configurate");
         if (!defaultCredentialsValidated) throw new IllegalStateException ("Credenziali di default non ancora verificate");
 
         String sanitizedNickname = requireNonBlank(nickname, "Il nickname non può essere vuoto");
@@ -67,7 +67,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
     @Override
     public boolean verifyLogin(String nickname, String password) {
         if (nickname == null || password == null) return false;
-        if (isFirstAccessPending()) return false;
+        if (isFirstAccessPending(nickname)) return false;
 
         String normalizedNickname= nickname.trim ();
         String normalizedPassword = password.trim ();
@@ -175,10 +175,11 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
     }
 
     @Override
-    public void addVolunteer(String nickname) {
-        if(nickname == null || nickname.isBlank()) throw new IllegalArgumentException ("Nickname non valido");
+    public void addVolunteer(String nickname, String defaultPassword) {
+        String sanitizedNick = requireNonBlank (nickname, "nickname non può essere vuoto");
+        String sanitizedPassword = requireNonBlank (defaultPassword, "password non può essere vuoto");
         if(volunteerRepository.findByNickname (nickname).isPresent()) throw new IllegalArgumentException ("Nickname già presente");
-        Volunteer volunteer = new  Volunteer (nickname);
+        Volunteer volunteer = new  Volunteer (sanitizedNick, sanitizedPassword);
         volunteer.setVisitsAttending (new ArrayList<> ());
         volunteerRepository.save(volunteer);
     }

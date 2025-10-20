@@ -9,15 +9,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
-public interface ConfiguratorService {
-
-    boolean isFirstAccessPending();
-
-    void verifyDefaultCredentials(String nickname, String password);
-
-    void setPersonalCredentials(String nickname, String password);
-
-    boolean verifyLogin(String nickname, String password);
+public interface ConfiguratorService extends LoginService {
 
     void setTerritorialScope(String scope);
 
@@ -29,7 +21,7 @@ public interface ConfiguratorService {
 
                         boolean ticketRequired, int minParticipants, int maxParticipants, LocalDate validFrom, LocalDate validTo);
 
-    void addVolunteer(String nickname);
+    void addVolunteer(String nickname, String defaultPassword);
 
     void linkVOlunteerToVisit(String nickname, String visitTypeId);
 
