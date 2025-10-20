@@ -33,7 +33,7 @@ public class Main {
     }
 
     private static void requireLogin(ConfiguratorService service, PromptReader reader, Printer printer) {
-        if (service.isFirstAccessPending ()) return;
+        if (service.isFirstAccessPending (ConfiguratorServiceImp.DEFAULT_NICKNAME)) return;
 
         printer. println ("-----------------------");
         printer.println ("Autenticazione configuratore richiesta");

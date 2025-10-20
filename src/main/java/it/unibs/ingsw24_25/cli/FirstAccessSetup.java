@@ -1,6 +1,7 @@
 package it.unibs.ingsw24_25.cli;
 
 import it.unibs.ingsw24_25.service.ConfiguratorService;
+import it.unibs.ingsw24_25.service.ConfiguratorServiceImp;
 
 import java.util.Objects;
 
@@ -29,7 +30,7 @@ public class FirstAccessSetup {
     }
 
     public void run(){
-        if(!service.isFirstAccessPending ()) return;
+        if(!service.isFirstAccessPending (ConfiguratorServiceImp.DEFAULT_NICKNAME)) return;
 
         printer.println(MENU_SEPARATOR);
         printer.println(INTRO_MESSAGE);

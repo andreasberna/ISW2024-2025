@@ -332,7 +332,7 @@ class ConfiguratorServiceImpTest {
         void addVolunteerPersistsVolunteerWithEmptyVisits() {
             when(volunteerRepository.findByNickname("alice")).thenReturn(Optional.empty());
 
-            service.addVolunteer("alice");
+            service.addVolunteer("alice", "password");
 
             ArgumentCaptor<Volunteer> captor = ArgumentCaptor.forClass(Volunteer.class);
             verify(volunteerRepository).save(captor.capture());
@@ -343,17 +343,17 @@ class ConfiguratorServiceImpTest {
 
         @Test
         void addVolunteerRejectsExistingNickname() {
-            Volunteer existing = new Volunteer("alice");
+            Volunteer existing = new Volunteer("alice", "password");
             when(volunteerRepository.findByNickname("alice")).thenReturn(Optional.of(existing));
 
-            assertThatThrownBy(() -> service.addVolunteer("alice"))
+            assertThatThrownBy(() -> service.addVolunteer("alice", "password"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("già presente");
         }
 
         @Test
         void linkVolunteerToVisitCreatesBidirectionalRelation() {
-            Volunteer volunteer = new Volunteer("alice");
+            Volunteer volunteer = new Volunteer("alice", "password");
             AtomicReference<List<Volunteer>> guidesRef = new AtomicReference<>();
             VisitType visitType = mock(VisitType.class);
             when(visitType.getVisitTitle()).thenReturn("Visita");
@@ -433,7 +433,7 @@ class ConfiguratorServiceImpTest {
 
         @Test
         void listVolunteerWithVisitTypeReturnsMappedDto() {
-            Volunteer volunteer = new Volunteer("alice");
+            Volunteer volunteer = new Volunteer("alice", "password");
             VisitType visit = mock(VisitType.class);
             when(visit.getVisitTitle()).thenReturn("Visita");
             volunteer.addVisit(visit);

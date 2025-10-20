@@ -43,7 +43,8 @@ public class CommandHandler {
     private static final String VISIT_VALID_TO_PROMPT = "Data di fine validità (yyyy-MM-dd): ";
     private static final String VISIT_INVALID_DATE_RANGE = "La data di fine non può essere precedente alla data di inizio.";
 
-    private static final String VOLUNTEER_PROMPT = "Inserisci il nickname del volontario: ";
+    private static final String VOLUNTEER_NICKNAME_PROMPT = "Inserisci il nickname del volontario: ";
+    private static final String VOLUNTEER_PASSWORD_PROMPT = "Inserisci la passowrd iniziale del volontario: ";
     private static final String VOLUNTEER_SUCCESS = "Volontario inserito con successo.";
     private static final String VOLUNTEER_LINK_VISIT_PROMPT = "Inserisci il titolo della visita da associare: ";
     private static final String VOLUNTEER_LINK_SUCCESS = "Associazione completata.";
@@ -408,8 +409,9 @@ public class CommandHandler {
 
     private void addVolunteer(){
         try {
-            String nickname = Objects.requireNonNull (reader.readLine (VOLUNTEER_PROMPT));
-            service.addVolunteer (nickname);
+            String nickname = Objects.requireNonNull (reader.readLine (VOLUNTEER_NICKNAME_PROMPT));
+            String password = Objects.requireNonNull (reader.readLine (VOLUNTEER_PASSWORD_PROMPT));
+            service.addVolunteer (nickname, password);
             printer.println (VOLUNTEER_SUCCESS);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println (ERROR_PREFIX + safeMessage(ex));
@@ -418,7 +420,7 @@ public class CommandHandler {
 
     private void linkVolunteerToVisit(){
         try {
-            String nickname = Objects.requireNonNull (reader.readLine (VOLUNTEER_PROMPT));
+            String nickname = Objects.requireNonNull (reader.readLine (VOLUNTEER_NICKNAME_PROMPT));
             String visitTitle = Objects.requireNonNull (reader.readLine (VOLUNTEER_LINK_VISIT_PROMPT));
             service.linkVOlunteerToVisit (nickname, visitTitle);
             printer.println (VOLUNTEER_LINK_SUCCESS);

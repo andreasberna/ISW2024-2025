@@ -57,7 +57,7 @@ class DTOMapperTest {
 
     @Test
     void volunteerToDtoListsLinkedVisits() {
-        Volunteer volunteer = new Volunteer("alice");
+        Volunteer volunteer = new Volunteer("alice", "password");
         VisitType visitType = mock(VisitType.class);
         when(visitType.getVisitTitle()).thenReturn("Visita");
         volunteer.addVisit(visitType);
