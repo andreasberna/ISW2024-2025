@@ -1,8 +1,6 @@
 package it.unibs.ingsw24_25.util;
 
-import it.unibs.ingsw24_25.DTO.PlaceDTO;
-import it.unibs.ingsw24_25.DTO.VisitTypeDTO;
-import it.unibs.ingsw24_25.DTO.VolunteerDTO;
+import it.unibs.ingsw24_25.DTO.*;
 import it.unibs.ingsw24_25.model.Place;
 import it.unibs.ingsw24_25.model.TimeSlot;
 import it.unibs.ingsw24_25.model.VisitType;
@@ -38,8 +36,43 @@ public final class DTOMapper {
         List<String> titles = v.getVisitsAttending ().stream().
                 map(VisitType::getVisitTitle)
                 .toList ();
-        return new VolunteerDTO (v.getNickname (), titles);
+
+        List<VolunteerAvailabilityDTO> availabilityDTOs = v.getAvailabilities ().entrySet ().stream ()
+                .sorted (java.util.Map.Entry.comparingByKey ())
+                .map (entry -> new VolunteerAvailabilityDTO(
+                        entry.getKey (),
+                        entry.getValue ().getPreferredDays ().stream ().toList (),
+                        entry.getValue ().getWeeklyFrequency (),
+                        entry.getValue ().getSubmittedOn ()
+                ))
+                .toList ();
+
+        List<AssignedShiftDTO> shiftsDTOs = v.getScheduledShifts ().entrySet ().stream ()
+                .flatMap (entry -> entry.getValue ().stream ()
+                        .map(shift -> new AssignedShiftDTO(
+                                entry.getKey (),
+                                shift.getDate (),
+                                shift.getVisitTypeId (),
+                                shift.getSlot ()
+                        )))
+                .sorted((left, right) -> compareShift(left, right))
+                .toList ();
+
+        return new VolunteerDTO (v.getNickname (), v.getPassword (), v.isFirstAccessPending (), titles, availabilityDTOs, shiftsDTOs);
     }
+
+    private static int compareShift(AssignedShiftDTO left, AssignedShiftDTO right) {
+        int monthComparison = left.getMonth().compareTo(right.getMonth());
+        if (monthComparison != 0) {
+            return monthComparison;
+        }
+        int dateComparison = left.getDate().compareTo(right.getDate());
+        if (dateComparison != 0) {
+            return dateComparison;
+        }
+        return left.getVisitTypeId().compareTo(right.getVisitTypeId());
+    }
+
 
     private static String summarizeDays(List<TimeSlot> slots){
         var days = slots.stream()
