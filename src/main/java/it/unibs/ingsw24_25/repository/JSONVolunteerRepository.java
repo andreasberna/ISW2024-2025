@@ -66,4 +66,9 @@ public class JSONVolunteerRepository implements VolunteerRepository{
     public void deleteByNickname(String nickname) {
         if(cache.remove(nickname) != null) persist();
     }
+
+    @Override
+    public boolean exist() {
+        return !cache.isEmpty();
+    }
 }

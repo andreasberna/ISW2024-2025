@@ -6,8 +6,9 @@ import java.util.Optional;
 
 public interface VolunteerRepository {
 
-    public Optional<Volunteer> findByNickname(String nickname);
-    public List<Volunteer> findAll();
-    public void save(Volunteer volunteer);
-    public void deleteByNickname(String nickname);
+    Optional<Volunteer> findByNickname(String nickname);
+    List<Volunteer> findAll();
+    void save(Volunteer volunteer);
+    void deleteByNickname(String nickname);
+    boolean exist();
 };
