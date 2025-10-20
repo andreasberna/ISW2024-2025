@@ -121,7 +121,7 @@ public class Volunteer {
     }
     public List<AssignedShift> getShiftsForMonth(YearMonth month) {
         Objects.requireNonNull(month, "il mese non può essere nulla");
-        ensureAvailabilityInitialized();
+        ensureShiftsInitialized ();
         List<AssignedShift> shifts = scheduledShifts.get (month);
         if (shifts == null) {return List.of();}
 
