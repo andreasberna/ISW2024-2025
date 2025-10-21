@@ -108,7 +108,7 @@ class ConfiguratorServiceImpTest {
             when(configuratorRepository.exists()).thenReturn(false);
             service.verifyDefaultCredentials("config", "psswrd");
 
-            service.setPersonalCredentials("  admin  ", "  secret  ");
+            service.setPersonalCredentials("config", "  admin  ", "  secret  ");
 
             ArgumentCaptor<Configurator> captor = ArgumentCaptor.forClass(Configurator.class);
             verify(configuratorRepository).save(captor.capture());
@@ -121,7 +121,7 @@ class ConfiguratorServiceImpTest {
         void setPersonalCredentialsFailsIfDefaultNotValidated() {
             when(configuratorRepository.exists()).thenReturn(false);
 
-            assertThatThrownBy(() -> service.setPersonalCredentials("nick", "pwd"))
+            assertThatThrownBy(() -> service.setPersonalCredentials("config", "nick", "pwd"))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("non ancora verificate");
 
