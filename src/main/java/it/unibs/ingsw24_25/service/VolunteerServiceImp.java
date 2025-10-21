@@ -90,15 +90,29 @@ public class VolunteerServiceImp implements VolunteerService{
     }
 
     @Override
-    public void setPersonalCredentials(String nickname, String password) {
-        Volunteer volunteer = loadVolunteer(nickname);
+    public void setPersonalCredentials(String currentNickname, String newNickname, String password) {
+        Volunteer volunteer = loadVolunteer(currentNickname);
         if (!volunteer.isFirstAccessPending ())
             throw new IllegalStateException ("Le credenziali personali sono state impostate");
 
-        String sanitizedPassword = requireNonBlank(password, "la Password non può essere nulla");
-        if(!defaultCredentialsValidated.remove(volunteer.getNickname ()))
+        String sanitizedPassword = requireNonBlank(password, "La nuova password non può essere nulla");
+        String sanitizedNickname = requireNonBlank(newNickname, "Il nuovo nickname non può essere vuoto");
+
+        String current = volunteer.getNickname();
+        if (current.equalsIgnoreCase(sanitizedNickname))
+            throw new IllegalArgumentException("Il nuovo nickname deve essere diverso da quello assegnato");
+
+        if (volunteer.passwordMatches(sanitizedPassword))
+            throw new IllegalArgumentException("La nuova password deve essere diversa da quella assegnata");
+
+        if (!current.equalsIgnoreCase(sanitizedNickname) && volunteerRepository.findByNickname(sanitizedNickname).isPresent())
+            throw new IllegalArgumentException("Nickname già presente");
+
+        if(!defaultCredentialsValidated.remove(current))
             throw new IllegalStateException ("Credenziali di default non ancora verificate");
 
+        volunteerRepository.deleteByNickname(current);
+        volunteer.setNickname(sanitizedNickname);
         volunteer.setPersonalCredentials (sanitizedPassword);
         volunteerRepository.save(volunteer);
     }

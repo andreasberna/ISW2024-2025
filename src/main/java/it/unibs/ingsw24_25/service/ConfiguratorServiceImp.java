@@ -54,11 +54,11 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
     }
 
     @Override
-    public void setPersonalCredentials(String nickname, String password) {
-        if (!isFirstAccessPending(nickname)) throw new IllegalStateException ("Le credenziali sono già state configurate");
+    public void setPersonalCredentials(String currentNickname, String newNickname, String password) {
+        if (!isFirstAccessPending(currentNickname)) throw new IllegalStateException ("Le credenziali sono già state configurate");
         if (!defaultCredentialsValidated) throw new IllegalStateException ("Credenziali di default non ancora verificate");
 
-        String sanitizedNickname = requireNonBlank(nickname, "Il nickname non può essere vuoto");
+        String sanitizedNickname = requireNonBlank(newNickname, "Il nickname non può essere vuoto");
         String sanitizedPassword = requireNonBlank(password, "La password non può essere vuota");
         configuratorRepository.save (new Configurator (sanitizedNickname, sanitizedPassword));
         defaultCredentialsValidated = false;
