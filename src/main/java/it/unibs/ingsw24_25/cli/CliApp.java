@@ -3,6 +3,7 @@ package it.unibs.ingsw24_25.cli;
 import it.unibs.ingsw24_25.service.ConfiguratorService;
 
 import java.io.PrintStream;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Scanner;
 
@@ -14,14 +15,17 @@ public class CliApp implements Runnable {
 
     private final PromptReader reader;
     private final Printer printer;
-    private final CommandRouter router;
+    private final ConfiguratorCommandHandler configuratorHandler;
+    private final VolunteerCommandHandler volunteerHandler;
 
     private volatile boolean running;
 
-    public CliApp(PromptReader reader, Printer printer, CommandRouter router) {
+    public CliApp(PromptReader reader, Printer printer,
+                  ConfiguratorCommandHandler configuratorHandler, VolunteerCommandHandler volunteerHandler) {
         this.reader = Objects.requireNonNull(reader, "reader non puù essere nullo");
         this.printer = Objects.requireNonNull(printer, "printer non può essere nullo");
-        this.router = Objects.requireNonNull(router, "router non può essere nullo");
+        this.configuratorHandler = Objects.requireNonNull (configuratorHandler, "configuratorHandler non può essere nullo");
+        this.volunteerHandler = Objects.requireNonNull (volunteerHandler, "volunteerHandler non può essere nullo");
     }
 
     @Override
@@ -31,13 +35,27 @@ public class CliApp implements Runnable {
         printer.println ("Benvenuto!");
         printer.println (MENU_SEPARATOR);
         while (running) {
-            showMenu();
+            showEntryMenu();
             String command = reader.readLine (DEFAULT_PROMPT);
-            if(command.equalsIgnoreCase (EXIT_COMMAND)) {
+            if (command == null){
+                printer.println (INVALID_COMMAND_MESSAGE);
+                continue;
+            }
+            String normalized = command.trim ().toLowerCase (Locale.ITALIAN);
+            if (normalized.isEmpty ()) {
+                printer.println (INVALID_COMMAND_MESSAGE);
+                continue;
+            }
+            if (EXIT_COMMAND.equals (normalized) || "esci".equals (normalized)) {
                 running = false;
                 continue;
             }
-            executeCommand(command);
+
+            switch (normalized) {
+                case "1", "config", "configuratore", "configurator" -> configuratorHandler.startSession ();
+                case "2", "volontario", "volunteer" -> volunteerHandler.startSession ();
+                default -> printer.println (INVALID_COMMAND_MESSAGE);
+            }
         }
         printer.println ("Arrivederci!");
     }
@@ -45,21 +63,12 @@ public class CliApp implements Runnable {
     public void start(){
         new Thread(this).start ();
     }
-    private void executeCommand(String command) {
-        if (command == null || command.isBlank ()) {
-            printer.println (INVALID_COMMAND_MESSAGE);
-            return;
-        }
-        if (!router.route(command.trim()))
-            printer.println (INVALID_COMMAND_MESSAGE);
-    }
 
-    private void showMenu(){
+    private void showEntryMenu(){
         printer.println(MENU_SEPARATOR);
-        printer.println("Scegli un'opzione");
-        printer.println("setup     - Inserisci luoghi, visite e volontari");
-        printer.println("list      - Visualizza le informazioni registrate");
-        printer.println("settings  - Configura i parametri di servizio");
+        printer.println("Seleziona il profilo di accesso");
+        printer.println("1 - Configuratore");
+        printer.println("2 - Volontario");
         printer.println("exit - Esci");
         printer.println(MENU_SEPARATOR);
     }

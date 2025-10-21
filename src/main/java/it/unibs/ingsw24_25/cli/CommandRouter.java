@@ -1,7 +1,5 @@
 package it.unibs.ingsw24_25.cli;
 
-import it.unibs.ingsw24_25.service.ConfiguratorService;
-
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -13,9 +11,9 @@ public class CommandRouter {
 
     public CommandRouter() {
     }
-    public CommandRouter(CommandHandler handler) {
+    public CommandRouter(ConfiguratorCommandHandler handler) {
         this();
-        Objects.requireNonNull (handler, "CommandHandler non può essere nullo");
+        Objects.requireNonNull (handler, "ConfiguratorCommandHandler non può essere nullo");
         register("1", handler::openSetupMenu);
         register("setup", handler::openSetupMenu);
         register("2", handler::openListMenu);

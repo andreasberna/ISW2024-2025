@@ -1,14 +1,16 @@
 package it.unibs.ingsw24_25.cli;
 
-import it.unibs.ingsw24_25.DTO.PlaceDTO;
-import it.unibs.ingsw24_25.DTO.VisitTypeDTO;
-import it.unibs.ingsw24_25.DTO.VolunteerDTO;
+import it.unibs.ingsw24_25.DTO.*;
+import it.unibs.ingsw24_25.model.TimeSlot;
 import it.unibs.ingsw24_25.model.VisitState;
 
 import java.io.PrintStream;
+import java.time.format.TextStyle;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
+
 
 public class Printer {
     public static final String PLACE_HEADER = "Luoghi disponibili:";
@@ -108,12 +110,102 @@ public class Printer {
                 .map(this::safe)
                 .collect(Collectors.joining(", "));
 
-        return ("Volontario: %s%nVisite: %s" + System.lineSeparator())
-                .formatted(safe(volunteer.getNickname()), visits);
+        String credentialStatus = volunteer.isFirstAccessPending()
+                ? "Credenziali personali da definire"
+                : "Credenziali personali definite";
+
+        String availabilitySection = formatAvailabilities(volunteer.getAvailabilities());
+        String shiftSection = formatShifts(volunteer.getScheduledShifts());
+
+        return ("Volontario: %s%nStato credenziali: %s%nVisite: %s%nDisponibilità:%n%s%nTurni assegnati:%n%s" + System.lineSeparator())
+                .formatted(
+                        safe(volunteer.getNickname()),
+                        credentialStatus,
+                        visits,
+                        availabilitySection,
+                        shiftSection
+                );
+    }
+
+    private String formatAvailabilities(List<VolunteerAvailabilityDTO> availabilities){
+        if (availabilities == null || availabilities.isEmpty()) {
+            return "  Nessuna disponibilità registrata";
+        }
+
+        return availabilities.stream()
+                .sorted((left, right) -> left.getReferenceMonth().compareTo(right.getReferenceMonth()))
+                .map(this::formatAvailability)
+                .collect(Collectors.joining(System.lineSeparator()));
+    }
+
+    private String formatAvailability(VolunteerAvailabilityDTO availability){
+        if (availability == null) {
+            return "";
+        }
+        String days = availability.getPreferredDays() == null || availability.getPreferredDays().isEmpty()
+                ? "-"
+                : availability.getPreferredDays().stream()
+                .sorted()
+                .map(day -> capitalize(day.getDisplayName(TextStyle.FULL, Locale.ITALIAN)))
+                .collect(Collectors.joining(", "));
+
+        return "  - %s | Giorni: %s | Frequenza settimanale: %d | Inviata il: %s"
+                .formatted(
+                        availability.getReferenceMonth(),
+                        days,
+                        availability.getWeeklyFrequency(),
+                        availability.getSubmittedOn()
+                );
+    }
+
+    private String formatShifts(List<AssignedShiftDTO> shifts){
+        if (shifts == null || shifts.isEmpty()) {
+            return "  Nessun turno assegnato";
+        }
+
+        return shifts.stream()
+                .map(this::formatShift)
+                .collect(Collectors.joining(System.lineSeparator()));
+    }
+
+    private String formatShift(AssignedShiftDTO shift){
+        if (shift == null) {
+            return "";
+        }
+        TimeSlot slot = shift.getSlot();
+        String dayLabel = slot != null && slot.getDay() != null
+                ? capitalize(slot.getDay().getDisplayName(TextStyle.FULL, Locale.ITALIAN))
+                : "-";
+        String startLabel = slot != null && slot.getStartTime() != null
+                ? slot.getStartTime().toString()
+                : "-";
+        long durationMinutes = slot != null && slot.getDuration() != null
+                ? slot.getDuration().toMinutes()
+                : 0;
+
+        return "  - %s (%s) | Visita: %s | Inizio: %s | Durata: %d minuti"
+                .formatted(
+                        shift.getDate(),
+                        dayLabel,
+                        safe(shift.getVisitTypeId()),
+                        startLabel,
+                        durationMinutes
+                );
     }
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private String capitalize(String value) {
+        if (value == null) {
+            return "";
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return "";
+        }
+        return trimmed.substring(0, 1).toUpperCase(Locale.ITALIAN) + trimmed.substring(1);
     }
 
     private String formatState(VisitState visit){

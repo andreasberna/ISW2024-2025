@@ -3,6 +3,8 @@ package it.unibs.ingsw24_25.cli;
 import it.unibs.ingsw24_25.repository.*;
 import it.unibs.ingsw24_25.service.ConfiguratorService;
 import it.unibs.ingsw24_25.service.ConfiguratorServiceImp;
+import it.unibs.ingsw24_25.service.VolunteerService;
+import it.unibs.ingsw24_25.service.VolunteerServiceImp;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -17,45 +19,25 @@ public class Main {
     private static final Path CONFIGURATORS_FILE = DATA_DIRECTORY.resolve("configurators.json");
 
     public static void main(String[] args) {
-        ConfiguratorService service = buildService();
+        VolunteerRepository volunteerRepository = createVolunteerRepository();
+        ConfiguratorService service = buildService(volunteerRepository);
+        VolunteerService volunteerService = new VolunteerServiceImp (volunteerRepository);
         Printer printer = new Printer (System.out);
         PromptReader reader = new PromptReader (new Scanner (System.in));
 
-        FirstAccessSetup setup = new FirstAccessSetup (service, reader, printer);
+        FirstAccessSetup setup = new FirstAccessSetup (service, volunteerService, reader, printer);
         setup.run();
 
-        requireLogin(service, reader, printer);
-
-        CommandHandler handler = new CommandHandler (service, printer, reader);
-        CommandRouter router = new CommandRouter (handler);
-        CliApp cliApp = new CliApp(reader, printer, router);
+        ConfiguratorCommandHandler configuratorHandler = new ConfiguratorCommandHandler (service, printer, reader);
+        VolunteerCommandHandler volunteerHandler = new VolunteerCommandHandler (volunteerService, setup, printer, reader);
+        CliApp cliApp = new CliApp (reader, printer, configuratorHandler, volunteerHandler);
         cliApp.run();
     }
 
-    private static void requireLogin(ConfiguratorService service, PromptReader reader, Printer printer) {
-        if (service.isFirstAccessPending (ConfiguratorServiceImp.DEFAULT_NICKNAME)) return;
 
-        printer. println ("-----------------------");
-        printer.println ("Autenticazione configuratore richiesta");
-        printer. println ("-----------------------");
-
-        boolean auhenticated = false;
-        while (!auhenticated) {
-            String nickname = reader.readLine ("Nickname: ");
-            String password = reader.readLine ("Password: ");
-            if (service.verifyLogin (nickname, password)) {
-                printer.println ("Accesso effettuato.");
-                auhenticated = true;
-            } else {
-                printer.println ("Credenziali non valide. Riprova");
-            }
-        }
-    }
-
-    private static ConfiguratorService buildService() {
+    private static ConfiguratorService buildService(VolunteerRepository volunteerRepository) {
         PlaceRepository placeRepository = new JSONPlaceRepository (PLACES_FILE);
         VisitTypeRepository visitTypeRepository = new JSONVisitTypeRepository (VISIT_TYPES_FILE);
-        VolunteerRepository volunteerRepository = new JSONVolunteerRepository (VOLUNTEERS_FILE);
         SettingsRepository settingsRepository = new JSONSettingsRepository (SETTINGS_FILE);
         JSONConfiguratorRepository configuratorRepository = new JSONConfiguratorRepository (CONFIGURATORS_FILE);
 
@@ -67,5 +49,9 @@ public class Main {
                 configuratorRepository
         );
 
+    }
+
+    private static VolunteerRepository createVolunteerRepository() {
+        return new JSONVolunteerRepository (VOLUNTEERS_FILE);
     }
 }
