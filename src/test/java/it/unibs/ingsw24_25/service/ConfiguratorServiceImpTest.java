@@ -215,7 +215,7 @@ class ConfiguratorServiceImpTest {
             SystemSettings settings = new SystemSettings("scope", 5, new ArrayList<>());
             when(settingsRepository.load()).thenReturn(Optional.of(settings));
 
-            service.setBlackoutDates(new ArrayList<> (Arrays.asList (day1, day2, duplicate, null, day1, duplicate)));
+            service.setBlackoutDates(new ArrayList<> (Arrays.asList (day2, duplicate, null, day1, duplicate)));
 
             ArgumentCaptor<SystemSettings> captor = ArgumentCaptor.forClass(SystemSettings.class);
             verify(settingsRepository).save(captor.capture());

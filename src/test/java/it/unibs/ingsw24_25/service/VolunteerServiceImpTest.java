@@ -141,7 +141,7 @@ class VolunteerServiceImpTest {
             );
             when (settingsRepository.load ()).thenReturn (Optional.of (settings));
 
-            service.submitAvailability ("vol001", availability, LocalDate.of (2024, 5, 20));
+            service.submitAvailability ("vol001", availability, LocalDate.of (2024, 5, 12));
 
             assertThat (volunteer.findAvailability (month)).isPresent ();
             verify (volunteerRepository).save (volunteer);

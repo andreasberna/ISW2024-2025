@@ -55,6 +55,6 @@ public class Main {
         return new JSONVolunteerRepository (VOLUNTEERS_FILE);
     }
     private static SettingsRepository createSettingsRepository() {
-        return new JSONSettingsRepository (SETTINGS_FILE);
+        return new JSONSettingsRepository (SETTINGS_FILE);1
     }
 }
