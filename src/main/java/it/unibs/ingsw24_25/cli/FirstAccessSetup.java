@@ -64,6 +64,10 @@ public class FirstAccessSetup {
 
     public String handleVolunteerFirstAccess(String nickname){
         Objects.requireNonNull (nickname, "Il nickname non può essere nullo");
+        String currentNickname = nickname.trim ();
+        if (currentNickname.isEmpty ())
+            throw new IllegalArgumentException ("Il nickname non può essere vuoto");
+
 
         printer.println (MENU_SEPARATOR);
         printer.println (VOLUNTEER_FIRST_ACCESS_HEADER);
@@ -76,7 +80,7 @@ public class FirstAccessSetup {
                 return null;
             }
             try {
-                volunteerService.verifyDefaultCredentials (nickname, defaultPassword);
+                volunteerService.verifyDefaultCredentials (currentNickname, defaultPassword);
                 break;
             } catch (IllegalArgumentException |  IllegalStateException ex ) {
                 printer.println (ERROR_PREFIX + safeMessage (ex));
@@ -93,13 +97,13 @@ public class FirstAccessSetup {
             String confirmation = reader.readLine (VOLUNTEER_CONFIRM_PASSWORD_PROMPT);
             if (confirmation == null) return null;
 
-            if (!Objects.equals(newNickname, confirmation)) {
+            if (!Objects.equals(newPassword, confirmation)) {
                 printer.println (ERROR_PREFIX + VOLUNTEER_PASSWORD_MISMATCH);
-               continue;
+                continue;
             }
 
             try {
-                volunteerService.setPersonalCredentials (newNickname, newPassword);
+                volunteerService.setPersonalCredentials (currentNickname, newNickname, newPassword);
                 printer.println (VOLUNTEER_FIRST_ACCESS_SUCCESS.formatted (newNickname));
                 return newNickname;
             } catch (IllegalArgumentException |  IllegalStateException ex ) {

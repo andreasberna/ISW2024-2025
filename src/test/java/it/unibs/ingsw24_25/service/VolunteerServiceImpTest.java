@@ -1,6 +1,9 @@
 package it.unibs.ingsw24_25.service;
 
+import it.unibs.ingsw24_25.model.MonthlyAvailability;
+import it.unibs.ingsw24_25.model.SystemSettings;
 import it.unibs.ingsw24_25.model.Volunteer;
+import it.unibs.ingsw24_25.repository.SettingsRepository;
 import it.unibs.ingsw24_25.repository.VolunteerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,6 +14,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,11 +31,14 @@ class VolunteerServiceImpTest {
     @Mock
     private VolunteerRepository volunteerRepository;
 
+    @Mock
+    private SettingsRepository settingsRepository;
+
     private VolunteerServiceImp service;
 
     @BeforeEach
     void setUp() {
-        service = new VolunteerServiceImp (volunteerRepository);
+        service = new VolunteerServiceImp (volunteerRepository, settingsRepository);
     }
 
     @Nested
@@ -80,6 +91,62 @@ class VolunteerServiceImpTest {
                     .hasMessageContaining ("password");
 
             verify (volunteerRepository, never ()).deleteByNickname (any ());
+        }
+    }
+
+    @Nested
+    @DisplayName("Availability submission")
+    class AvailabilitySubmission {
+
+        @Test
+        void submitAvailabilityRejectsDaysConflictingWithExcludedDates() {
+            Volunteer volunteer = new Volunteer ("vol001", "tempPass");
+            volunteer.setPersonalCredentials ("Secret123!");
+            YearMonth month = YearMonth.of (2024, 6);
+            MonthlyAvailability availability = new MonthlyAvailability (
+                    month,
+                    EnumSet.of (DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
+                    2,
+                    LocalDate.of (2024, 5, 10)
+            );
+            when (volunteerRepository.findByNickname ("vol001")).thenReturn (Optional.of (volunteer));
+            SystemSettings settings = new SystemSettings (
+                    "scope",
+                    10,
+                    List.of (LocalDate.of (2024, 6, 10))
+            );
+            when (settingsRepository.load ()).thenReturn (Optional.of (settings));
+
+            assertThatThrownBy (() -> service.submitAvailability ("vol001", availability, LocalDate.of (2024, 5, 20)))
+                    .isInstanceOf (IllegalArgumentException.class)
+                    .hasMessageContaining ("2024-06-10");
+
+            verify (volunteerRepository, never ()).save (any ());
+        }
+
+        @Test
+        void submitAvailabilityPersistsWhenNoConflictsFound() {
+            Volunteer volunteer = new Volunteer ("vol001", "tempPass");
+            volunteer.setPersonalCredentials ("Secret123!");
+            YearMonth month = YearMonth.of (2024, 6);
+            MonthlyAvailability availability = new MonthlyAvailability (
+                    month,
+                    EnumSet.of (DayOfWeek.THURSDAY),
+                    1,
+                    LocalDate.of (2024, 5, 10)
+            );
+            when (volunteerRepository.findByNickname ("vol001")).thenReturn (Optional.of (volunteer));
+            SystemSettings settings = new SystemSettings (
+                    "scope",
+                    10,
+                    List.of (LocalDate.of (2024, 6, 10))
+            );
+            when (settingsRepository.load ()).thenReturn (Optional.of (settings));
+
+            service.submitAvailability ("vol001", availability, LocalDate.of (2024, 5, 20));
+
+            assertThat (volunteer.findAvailability (month)).isPresent ();
+            verify (volunteerRepository).save (volunteer);
         }
     }
 }

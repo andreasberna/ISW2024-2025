@@ -20,8 +20,9 @@ public class Main {
 
     public static void main(String[] args) {
         VolunteerRepository volunteerRepository = createVolunteerRepository();
-        ConfiguratorService service = buildService(volunteerRepository);
-        VolunteerService volunteerService = new VolunteerServiceImp (volunteerRepository);
+        SettingsRepository settingsRepository = createSettingsRepository();
+        ConfiguratorService service = buildService(volunteerRepository, settingsRepository);
+        VolunteerService volunteerService = new VolunteerServiceImp (volunteerRepository, settingsRepository);
         Printer printer = new Printer (System.out);
         PromptReader reader = new PromptReader (new Scanner (System.in));
 
@@ -35,10 +36,9 @@ public class Main {
     }
 
 
-    private static ConfiguratorService buildService(VolunteerRepository volunteerRepository) {
+    private static ConfiguratorService buildService(VolunteerRepository volunteerRepository, SettingsRepository settingsRepository) {
         PlaceRepository placeRepository = new JSONPlaceRepository (PLACES_FILE);
         VisitTypeRepository visitTypeRepository = new JSONVisitTypeRepository (VISIT_TYPES_FILE);
-        SettingsRepository settingsRepository = new JSONSettingsRepository (SETTINGS_FILE);
         JSONConfiguratorRepository configuratorRepository = new JSONConfiguratorRepository (CONFIGURATORS_FILE);
 
         return new ConfiguratorServiceImp (
@@ -53,5 +53,8 @@ public class Main {
 
     private static VolunteerRepository createVolunteerRepository() {
         return new JSONVolunteerRepository (VOLUNTEERS_FILE);
+    }
+    private static SettingsRepository createSettingsRepository() {
+        return new JSONSettingsRepository (SETTINGS_FILE);
     }
 }

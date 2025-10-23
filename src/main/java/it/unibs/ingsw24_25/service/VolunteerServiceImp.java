@@ -2,7 +2,9 @@ package it.unibs.ingsw24_25.service;
 
 import it.unibs.ingsw24_25.model.AssignedShift;
 import it.unibs.ingsw24_25.model.MonthlyAvailability;
+import it.unibs.ingsw24_25.model.SystemSettings;
 import it.unibs.ingsw24_25.model.Volunteer;
+import it.unibs.ingsw24_25.repository.SettingsRepository;
 import it.unibs.ingsw24_25.repository.VolunteerRepository;
 
 import java.time.LocalDate;
@@ -12,10 +14,12 @@ import java.util.*;
 public class VolunteerServiceImp implements VolunteerService{
 
     private final VolunteerRepository volunteerRepository;
+    private final SettingsRepository settingsRepository;
     private final Set<String> defaultCredentialsValidated = new HashSet<> ();
 
-    public VolunteerServiceImp(VolunteerRepository volunteerRepository) {
+    public VolunteerServiceImp(VolunteerRepository volunteerRepository, SettingsRepository settingsRepository) {
         this.volunteerRepository = Objects.requireNonNull(volunteerRepository);
+        this.settingsRepository = Objects.requireNonNull(settingsRepository);
     }
 
 
@@ -31,6 +35,7 @@ public class VolunteerServiceImp implements VolunteerService{
                 availability.getWeeklyFrequency (),
                 availability.getSubmittedOn ()
         );
+        ensureAvailabilityNotOnBlackoutDates(sanitized);
         volunteer.registerAvailability (sanitized, today);
         volunteerRepository.save(volunteer);
     }
@@ -131,5 +136,34 @@ public class VolunteerServiceImp implements VolunteerService{
         if (loaded.isFirstAccessPending ()) return false;
 
         return loaded.passwordMatches (sanitizedPassword);
+    }
+
+    private void ensureAvailabilityNotOnBlackoutDates(MonthlyAvailability availability) {
+        settingsRepository.load()
+                .map(SystemSettings::getExcludedDates)
+                .ifPresent(dates -> {
+                    if (dates.isEmpty()) {
+                        return;
+                    }
+
+                    YearMonth referenceMonth = availability.getReferenceMonth();
+                    List<LocalDate> conflicts = dates.stream()
+                            .filter(Objects::nonNull)
+                            .filter(date -> YearMonth.from(date).equals(referenceMonth))
+                            .filter(date -> availability.getPreferredDays().contains(date.getDayOfWeek()))
+                            .sorted()
+                            .toList();
+
+                    if (!conflicts.isEmpty()) {
+                        String formatted = conflicts.stream()
+                                .map(LocalDate::toString)
+                                .reduce((left, right) -> left + ", " + right)
+                                .orElse("");
+                        throw new IllegalArgumentException(
+                                "Le date %s sono precluse alle visite per il mese %s."
+                                        .formatted(formatted, referenceMonth)
+                        );
+                    }
+                });
     }
 }
