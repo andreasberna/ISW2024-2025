@@ -11,7 +11,15 @@ public final class AvailabilitySubmissionPolicy {
     public static boolean isWindowOpen(YearMonth referenceMonth, LocalDate today) {
         Objects.requireNonNull(referenceMonth, "referenceMonth non può essere nullo");
         Objects.requireNonNull(today, "today non può essere nullo");
-        LocalDate deadline = referenceMonth.atDay(15);
+
+        YearMonth submissionMonth = referenceMonth.minusMonths (1);
+        LocalDate windowStart = submissionMonth.atDay (1);
+        LocalDate deadline = submissionMonth.atDay (15);
+
+        if (today.isBefore (windowStart)) {
+            return false;
+        }
+
         return !today.isAfter(deadline);
     }
 

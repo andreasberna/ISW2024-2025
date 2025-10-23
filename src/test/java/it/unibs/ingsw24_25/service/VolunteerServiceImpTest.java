@@ -49,7 +49,6 @@ class VolunteerServiceImpTest {
         void setPersonalCredentialsUpdatesNicknameAndPasswordAfterValidation() {
             Volunteer volunteer = new Volunteer ("vol001", "tempPass");
             when (volunteerRepository.findByNickname ("vol001")).thenReturn (Optional.of (volunteer));
-            when (volunteerRepository.findByNickname ("guide.one")).thenReturn (Optional.empty ());
 
             service.verifyDefaultCredentials ("vol001", "tempPass");
             service.setPersonalCredentials ("vol001", " guide.one ", " newSecret ");
@@ -82,7 +81,6 @@ class VolunteerServiceImpTest {
         void setPersonalCredentialsFailsIfPasswordUnchanged() {
             Volunteer volunteer = new Volunteer ("vol001", "tempPass");
             when (volunteerRepository.findByNickname ("vol001")).thenReturn (Optional.of (volunteer));
-            when (volunteerRepository.findByNickname ("guide.one")).thenReturn (Optional.empty ());
 
             service.verifyDefaultCredentials ("vol001", "tempPass");
 
@@ -148,5 +146,26 @@ class VolunteerServiceImpTest {
             assertThat (volunteer.findAvailability (month)).isPresent ();
             verify (volunteerRepository).save (volunteer);
         }
+
+        @Test
+        void submitAvailabilityFailsWhenWindowClosed() {
+            Volunteer volunteer = new Volunteer ("vol001", "tempPass");
+            volunteer.setPersonalCredentials ("Secret123!");
+            YearMonth month = YearMonth.of (2024, 11);
+            MonthlyAvailability availability = new MonthlyAvailability (
+                    month,
+                    EnumSet.of (DayOfWeek.MONDAY),
+                    1,
+                    LocalDate.of (2024, 10, 10)
+            );
+            when (volunteerRepository.findByNickname ("vol001")).thenReturn (Optional.of (volunteer));
+
+            assertThatThrownBy (() -> service.submitAvailability ("vol001", availability, LocalDate.of (2024, 10, 23)))
+                    .isInstanceOf (IllegalStateException.class)
+                    .hasMessageContaining ("La finestra di caricamento è chiusa");
+
+            verify (volunteerRepository, never ()).save (any ());
+        }
+
     }
 }
