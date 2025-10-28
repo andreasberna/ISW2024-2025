@@ -1,13 +1,12 @@
 package it.unibs.ingsw24_25.cli;
 
-import it.unibs.ingsw24_25.DTO.PlaceDTO;
-import it.unibs.ingsw24_25.DTO.VisitTypeDTO;
-import it.unibs.ingsw24_25.DTO.VolunteerDTO;
+import it.unibs.ingsw24_25.DTO.*;
 import it.unibs.ingsw24_25.cli.Printer;
 import it.unibs.ingsw24_25.cli.PromptReader;
 import it.unibs.ingsw24_25.model.TimeSlot;
 import it.unibs.ingsw24_25.service.ConfiguratorService;
 import it.unibs.ingsw24_25.service.ConfiguratorServiceImp;
+import it.unibs.ingsw24_25.util.AvailabilitySubmissionPolicy;
 import it.unibs.ingsw24_25.util.ExcludedDatePolicy;
 
 import java.time.*;
@@ -29,6 +28,7 @@ public class ConfiguratorCommandHandler {
     private static final String PRECLUDED_DATES_INVALID_FORMAT = "Formato data non valido: %s. Usa yyyy-MM-dd";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern ("HH:mm");
+    private static final DateTimeFormatter YEAR_MONTH_INPUT_FORMATTER = DateTimeFormatter.ofPattern("MM-yyyy");
     private static final DateTimeFormatter YEAR_MONTH_FORMATTER = DateTimeFormatter.ofPattern ("MM yyyy", Locale.ITALIAN);
 
     private static final String CONFIGURATOR_LOGIN_HEADER = "Autenticazione configuratore";
@@ -41,12 +41,43 @@ public class ConfiguratorCommandHandler {
     private static final String CONFIGURATOR_MENU_SETUP_OPTION = "1 - Menu setup";
     private static final String CONFIGURATOR_MENU_LIST_OPTION = "2 - Menu liste";
     private static final String CONFIGURATOR_MENU_SETTINGS_OPTION = "3 - Menu impostazioni";
-    private static final String CONFIGURATOR_MENU_BACK_OPTION = "back - Torna alla schermata iniziale";
+    private static final String CONFIGURATOR_MENU_PLANNING_OPTION = "4 - Menu pianificazione";
+    private static final String CONFIGURATOR_MENU_BACK_OPTION = "back - Torna alla schermata precedente";
+    private static final String CONFIGURATOR_MENU_LOGOUT_OPTION = "logout - Esci dal profilo";
+
+    private static final String PLANNING_MENU_HEADER = "Menu pianificazione";
+    private static final String PLANNING_CLOSE_WINDOW_OPTION = "1 - Chiudi finestra disponibilità";
+    private static final String PLANNING_GENERATE_PLAN_OPTION = "2 - Genera piano mensile";
+    private static final String PLANNING_ASSIGN_OPTION = "3 - Assegna volontario a visita";
+    private static final String PLANNING_REMOVE_VISIT_OPTION = "4 - Rimuovi visita pianificata";
+    private static final String PLANNING_REMOVE_PLACE_OPTION = "5 - Rimuovi luogo (con cascata)";
+    private static final String PLANNING_REMOVE_VISIT_TYPE_OPTION = "6 - Rimuovi tipo visita (con cascata)";
+    private static final String PLANNING_REMOVE_VOLUNTEER_OPTION = "7 - Rimuovi volontario";
+    private static final String PLANNING_REOPEN_OPTION = "8 - Riapri finestra disponibilità";
+
+    private static final String PLANNING_DATE_PROMPT = "Inserisci la data (yyyy-MM-dd): ";
+    private static final String PLANNING_MONTH_PROMPT = "Inserisci il mese di pianificazione (MM-yyyy): ";
+    private static final String PLANNING_VISIT_TYPE_PROMPT = "Identificativo (ID) del tipo visita: ";
+    private static final String PLANNING_VOLUNTEER_PROMPT = "Nickname volontario da assegnare: ";
+    private static final String PLANNING_CONFIRM_PROMPT = "Confermi? (si/no): ";
+    private static final String PLANNING_WARNING_PLACE = "Attenzione: la rimozione del luogo eliminerà visite pianificate e assegnazioni collegate.";
+    private static final String PLANNING_WARNING_VISIT_TYPE = "Attenzione: la rimozione del tipo visita eliminerà visite pianificate e potenzialmente volontari rimasti senza incarichi.";
+    private static final String PLANNING_WARNING_VOLUNTEER = "Attenzione: la rimozione del volontario eliminerà le sue disponibilità e i turni assegnati.";
+    private static final String PLANNING_SUCCESS_CLOSE = "Finestra di disponibilità chiusa.";
+    private static final String PLANNING_SUCCESS_GENERATION = "Piano mensile generato.";
+    private static final String PLANNING_SUCCESS_ASSIGNMENT = "Assegnazione completata.";
+    private static final String PLANNING_SUCCESS_VISIT_REMOVAL = "Visita pianificata rimossa.";
+    private static final String PLANNING_SUCCESS_PLACE_REMOVAL = "Luogo rimosso.";
+    private static final String PLANNING_SUCCESS_VISIT_TYPE_REMOVAL = "Tipo visita rimosso.";
+    private static final String PLANNING_SUCCESS_VOLUNTEER_REMOVAL = "Volontario rimosso.";
+    private static final String PLANNING_SUCCESS_REOPEN = "Finestra di disponibilità riaperta.";
+    private static final String PLANNING_NO_PLAN_MESSAGE = "Nessun piano disponibile per il mese richiesto.";
 
     private static final String PLACE_SELECTION_PROMPT = "Inserisci il titolo del luogo di cui visualizzare le visite: ";
     private static final String PLACE_NAME_PROMPT = "Inserisci il nome del luogo: ";
     private static final String PLACE_DESCRIPTION_PROMPT = "Inserisci la descrizione del luogo: ";
     private static final String PLACE_LOCATION_PROMPT = "Inserisci la localizzazione del luogo: ";
+    private static final String PLACE_REMOVE_PROMPT = "Inserisci il nome del luogo da rimuovere: ";
 
     private static final String VISIT_PLACE_PROMPT = "Inserisci nome del luogo relativo alla visita: ";
     private static final String VISIT_TITLE_PROMPT = "Inserisci il titolo della visita: ";
@@ -62,12 +93,16 @@ public class ConfiguratorCommandHandler {
     private static final String VISIT_VALID_FROM_PROMPT = "Data di inizio validità (yyyy-MM-dd): ";
     private static final String VISIT_VALID_TO_PROMPT = "Data di fine validità (yyyy-MM-dd): ";
     private static final String VISIT_INVALID_DATE_RANGE = "La data di fine non può essere precedente alla data di inizio.";
+    private static final String VISIT_REMOVE_PROMPT = "Identificativo (ID) del tipo visita da rimuovere: ";
+
 
     private static final String VOLUNTEER_NICKNAME_PROMPT = "Inserisci il nickname del volontario: ";
     private static final String VOLUNTEER_PASSWORD_PROMPT = "Inserisci la passowrd iniziale del volontario: ";
     private static final String VOLUNTEER_SUCCESS = "Volontario inserito con successo.";
-    private static final String VOLUNTEER_LINK_VISIT_PROMPT = "Inserisci il titolo della visita da associare: ";
+    private static final String VOLUNTEER_LINK_VISIT_PROMPT = "Inserisci l'ID del tipo visita da associare: ";
     private static final String VOLUNTEER_LINK_SUCCESS = "Associazione completata.";
+
+    private static final String VOLUNTEER_REMOVE_PROMPT = "Nickname del volontario da rimuovere: ";
     private static final String PRECLUDED_DATES_SUCCESS = "Date precluse aggiornate.";
     private static final String CLEAR_TOKEN = "-";
     private static final String CLEAR_TOKEN_ALT = "nessuna";
@@ -130,7 +165,8 @@ public class ConfiguratorCommandHandler {
             printer.println(CONFIGURATOR_MENU_SETUP_OPTION);
             printer.println(CONFIGURATOR_MENU_LIST_OPTION);
             printer.println(CONFIGURATOR_MENU_SETTINGS_OPTION);
-            printer.println(CONFIGURATOR_MENU_BACK_OPTION);
+            printer.println (CONFIGURATOR_MENU_PLANNING_OPTION);
+            printer.println(CONFIGURATOR_MENU_LOGOUT_OPTION);
             printer.println(MENU_SEPARATOR);
 
             String choice = reader.readLine (DEFAULT_PROMPT);
@@ -144,6 +180,7 @@ public class ConfiguratorCommandHandler {
                 case "1", "setup" -> openSetupMenu();
                 case "2", "list" -> openListMenu();
                 case "3", "settings" -> openSettingsMenu();
+                case "4", "planning" -> openPlanningMenu();
                 case BACK_COMMAND ->  stayInMenu = false;
                 default -> printer.println (INVALID_COMMAND_MESSAGE);
             }
@@ -159,7 +196,7 @@ public class ConfiguratorCommandHandler {
             printer.println("2 - Aggiungi visita");
             printer.println("3 - aggiungi volontario");
             printer.println("4 - Associa volontario a visita");
-            printer.println("back - Torna al menù principale");
+            printer.println(CONFIGURATOR_MENU_BACK_OPTION);
             printer.println("Menu setup: ");
 
             String choice = reader.readLine(DEFAULT_PROMPT).toLowerCase(Locale.ITALIAN);
@@ -183,7 +220,7 @@ public class ConfiguratorCommandHandler {
             printer.println("2 - Visualizza visite per luogo");
             printer.println("3 - Visualizza visite con stato");
             printer.println("4 - Visualizza volontari");
-            printer.println("back - Torna al menu principale");
+            printer.println(CONFIGURATOR_MENU_BACK_OPTION);
             printer.println(MENU_SEPARATOR);
 
             String choice = reader.readLine(DEFAULT_PROMPT).toLowerCase(Locale.ITALIAN);
@@ -205,13 +242,45 @@ public class ConfiguratorCommandHandler {
             printer.println("Menu impostazioni");
             printer.println("1 - Imposta date precluse");
             printer.println("2 - Imposta max persone per iscrizione");
-            printer.println("back - Torna al menu principale");
+            printer.println(CONFIGURATOR_MENU_BACK_OPTION);
             printer.println(MENU_SEPARATOR);
 
             String choice = reader.readLine(DEFAULT_PROMPT).toLowerCase(Locale.ITALIAN);
             switch (choice) {
                 case "1" -> setBlackOutDates();
                 case "2" -> setMaxPeoplePerSub();
+                case BACK_COMMAND -> stayInMenu = false;
+                default -> printer.println(INVALID_COMMAND_MESSAGE);
+            }
+        }
+        return true;
+    }
+    public boolean openPlanningMenu() {
+        boolean stayInMenu = true;
+        while (stayInMenu) {
+            printer.println(MENU_SEPARATOR);
+            printer.println(PLANNING_MENU_HEADER);
+            printer.println(PLANNING_CLOSE_WINDOW_OPTION);
+            printer.println(PLANNING_GENERATE_PLAN_OPTION);
+            printer.println(PLANNING_ASSIGN_OPTION);
+            printer.println(PLANNING_REMOVE_VISIT_OPTION);
+            printer.println(PLANNING_REMOVE_PLACE_OPTION);
+            printer.println(PLANNING_REMOVE_VISIT_TYPE_OPTION);
+            printer.println(PLANNING_REMOVE_VOLUNTEER_OPTION);
+            printer.println(PLANNING_REOPEN_OPTION);
+            printer.println("back - Torna al menu principale");
+            printer.println(MENU_SEPARATOR);
+
+            String choice = reader.readLine(DEFAULT_PROMPT).toLowerCase(Locale.ITALIAN);
+            switch (choice) {
+                case "1" -> closeAvailabilityWindowFlow();
+                case "2" -> generatePlanFlow();
+                case "3" -> assignVolunteerToPlannedVisitFlow();
+                case "4" -> removePlannedVisitFlow();
+                case "5" -> removePlaceCascadeFlow();
+                case "6" -> removeVisitTypeCascadeFlow();
+                case "7" -> removeVolunteerFlow();
+                case "8" -> reopenAvailabilityWindowFlow();
                 case BACK_COMMAND -> stayInMenu = false;
                 default -> printer.println(INVALID_COMMAND_MESSAGE);
             }
@@ -278,8 +347,8 @@ public class ConfiguratorCommandHandler {
     private void linkVolunteerToVisit() {
         try {
             String nickname = Objects.requireNonNull (reader.readLine (VOLUNTEER_NICKNAME_PROMPT));
-            String visitTitle = Objects.requireNonNull (reader.readLine (VOLUNTEER_LINK_VISIT_PROMPT));
-            service.linkVOlunteerToVisit (nickname, visitTitle);
+            String visitId = Objects.requireNonNull (reader.readLine (VOLUNTEER_LINK_VISIT_PROMPT));
+            service.linkVOlunteerToVisit (nickname, visitId);
             printer.println (VOLUNTEER_LINK_SUCCESS);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println (ERROR_PREFIX + safeMessage (ex));
@@ -373,6 +442,116 @@ public class ConfiguratorCommandHandler {
         try {
             service.setMaxPeoplePerSubscription(max);
             printer.println (MAX_PEOPLE_SUCCESS);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            printer.println (ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+
+    //planning methods
+    private void closeAvailabilityWindowFlow() {
+        LocalDate today = readDate (PLANNING_DATE_PROMPT);
+        try {
+            service.closeAvailabilityWindow (today);
+            printer.println (PLANNING_SUCCESS_CLOSE);
+            YearMonth targetMonth = AvailabilitySubmissionPolicy.nextSubmissionMonth (today);
+            displayAvailabilitySnapshots(targetMonth);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            printer.println (ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+
+    private void generatePlanFlow(){
+        YearMonth month = readYearMonth(PLANNING_MONTH_PROMPT);
+        try {
+            MonthlyPlanDTO plan = service.generateMonthlyPlan (month);
+            printer.println (PLANNING_SUCCESS_GENERATION);
+            printer.printMonthlyPlan(plan);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            printer.println (ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+
+    private void assignVolunteerToPlannedVisitFlow() {
+        YearMonth month = readYearMonth(PLANNING_MONTH_PROMPT);
+        LocalDate date = readDate (PLANNING_DATE_PROMPT);
+        LocalTime startTime = readTime (VISIT_START_PROMPT);
+        int durationMinutes = readPositiveInt (VISIT_DURATION_PROMPT);
+        TimeSlot slot = new TimeSlot (date.getDayOfWeek (), startTime, Duration.ofMinutes(durationMinutes));
+        String visitTypeId = reader.readLine (PLANNING_VISIT_TYPE_PROMPT);
+        String volunteerId = reader.readLine (PLANNING_VOLUNTEER_PROMPT);
+        try {
+            service.assignVolunteerToPlannedVisit (month, date, slot, visitTypeId, volunteerId);
+            printer.println (PLANNING_SUCCESS_ASSIGNMENT);
+            displayPlan(month);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            printer.println (ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+
+    private void removePlannedVisitFlow() {
+        YearMonth month = readYearMonth(PLANNING_MONTH_PROMPT);
+        LocalDate date = readDate(PLANNING_DATE_PROMPT);
+        LocalTime startTime = readTime(VISIT_START_PROMPT);
+        int durationMinutes = readPositiveInt(VISIT_DURATION_PROMPT);
+        TimeSlot slot = new TimeSlot(date.getDayOfWeek(), startTime, Duration.ofMinutes(durationMinutes));
+        String visitTypeId = reader.readLine(PLANNING_VISIT_TYPE_PROMPT);
+        try {
+            service.removePlannedVisit(month, date, slot, visitTypeId);
+            printer.println(PLANNING_SUCCESS_VISIT_REMOVAL);
+            displayPlan(month);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            printer.println(ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+
+
+    private void removePlaceCascadeFlow(){
+        String placeId = reader.readLine (PLACE_REMOVE_PROMPT);
+        if (!confirmCascade(PLANNING_WARNING_PLACE)) {
+            printer.println (OPERATION_ABORTED);
+            return;
+        }
+        try {
+            service.removePlace (placeId);
+            printer.println (PLANNING_SUCCESS_PLACE_REMOVAL);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            printer.println (ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+
+    private void removeVisitTypeCascadeFlow() {
+        String visitTypeId = reader.readLine (VISIT_REMOVE_PROMPT);
+        if (!confirmCascade(PLANNING_WARNING_VISIT_TYPE)) {
+            printer.println(OPERATION_ABORTED);
+            return;
+        }
+        try {
+            service.removeVisitType (visitTypeId);
+            printer.println (PLANNING_SUCCESS_VISIT_TYPE_REMOVAL);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            printer.println (ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+
+    private void removeVolunteerFlow() {
+        String volunteer = reader.readLine (VOLUNTEER_REMOVE_PROMPT);
+        if (!confirmCascade(PLANNING_WARNING_VOLUNTEER)) {
+            printer.println(OPERATION_ABORTED);
+            return;
+        }
+        try {
+            service.removeVolunteer (volunteer);
+            printer.println (PLANNING_SUCCESS_VOLUNTEER_REMOVAL);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            printer.println (ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+
+    private void reopenAvailabilityWindowFlow(){
+        LocalDate today = readDate (PLANNING_DATE_PROMPT);
+        try{
+            service.reopenAvailabilityWindow (today);
+            printer.println (PLANNING_SUCCESS_REOPEN);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println (ERROR_PREFIX + safeMessage(ex));
         }
@@ -485,6 +664,16 @@ public class ConfiguratorCommandHandler {
             }
         }
     }
+    private YearMonth readYearMonth(String prompt) {
+        while (true) {
+            String value = reader.readLine(prompt);
+            try {
+                return YearMonth.parse(value, YEAR_MONTH_INPUT_FORMATTER);
+            } catch (DateTimeParseException ex) {
+                printer.println(ERROR_PREFIX + "Formato mese non valido. Usa MM-yyyy");
+            }
+        }
+    }
 
 
     private boolean isBackCommand(String value) {
@@ -494,5 +683,39 @@ public class ConfiguratorCommandHandler {
         String message = ex.getMessage();
         return message == null ? "" : message;
     }
+
+    private void displayAvailabilitySnapshots(YearMonth month) {
+        try {
+            MonthlyPlanDTO plan = service.getMonthlyPlanDetails(month);
+            List<PlanAvailabilityDTO> snapshots = plan.getAvailabilitySnapshots();
+            if (snapshots == null || snapshots.isEmpty()) {
+                printer.println("Nessuna disponibilità registrata per il mese " + month + ".");
+                return;
+            }
+            printer.printAvailabilitySnapshots(snapshots);
+        } catch (IllegalStateException ex) {
+            printer.println(PLANNING_NO_PLAN_MESSAGE);
+        } catch (RuntimeException ex) {
+            printer.println(ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+
+    private void displayPlan(YearMonth month) {
+        try {
+            MonthlyPlanDTO plan = service.getMonthlyPlanDetails(month);
+            printer.printMonthlyPlan(plan);
+        } catch (IllegalStateException ex) {
+            printer.println(PLANNING_NO_PLAN_MESSAGE);
+        } catch (RuntimeException ex) {
+            printer.println(ERROR_PREFIX + safeMessage(ex));
+        }
+    }
+
+    private boolean confirmCascade(String warningMessage) {
+        printer.println(warningMessage);
+        return reader.readBoolean(PLANNING_CONFIRM_PROMPT);
+    }
+
+
 
 }
