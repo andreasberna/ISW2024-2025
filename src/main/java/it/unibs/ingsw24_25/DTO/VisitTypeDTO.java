@@ -7,6 +7,8 @@ import it.unibs.ingsw24_25.model.Volunteer;
 import java.util.List;
 
 public class VisitTypeDTO {
+
+    private String id;
     private String title;
     private String daySummary;
     private String startTime;
@@ -19,8 +21,9 @@ public class VisitTypeDTO {
     private VisitState state;
 
 
-    public VisitTypeDTO(String title, String daySummary, String startTime, String endTime,
+    public VisitTypeDTO(String id, String title, String daySummary, String startTime, String endTime,
                         int durationMinutes, boolean ticketRequired, int minParticipants, int maxParticipants, String placeID, VisitState state ) {
+        this.id = id;
         this.title = title;
         this.daySummary = daySummary;
         this.startTime = startTime;
@@ -33,6 +36,9 @@ public class VisitTypeDTO {
         this.state = state;
     }
 
+    public String getId() {
+        return id;
+    }
     public String getTitle() {
         return title;
     }

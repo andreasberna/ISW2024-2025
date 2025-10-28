@@ -4,9 +4,10 @@ import it.unibs.ingsw24_25.model.PlanningPhase;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.Objects;
 
-public class MontthlyPlanDTO {
+public class MonthlyPlanDTO {
 
     private YearMonth targetMonth;
     private PlanningPhase phase;
