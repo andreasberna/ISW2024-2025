@@ -11,11 +11,17 @@ import java.util.*;
 
 public class JSONVolunteerRepository implements VolunteerRepository{
 
-    private Path file;
-    private Map<String,Volunteer> cache;
+    private final Path file;
+    private final Map<String,Volunteer> cache;
+    private final MonthlyVisitPlanRepository planRepository;
+
 
     public JSONVolunteerRepository(Path file) {
+        this(file, null);
+    }
+    public JSONVolunteerRepository(Path file,  MonthlyVisitPlanRepository planRepository) {
         this.file = file;
+        this.planRepository = planRepository;
         this.cache = new HashMap<> ();
         init();
     }
@@ -64,7 +70,13 @@ public class JSONVolunteerRepository implements VolunteerRepository{
 
     @Override
     public void deleteByNickname(String nickname) {
-        if(cache.remove(nickname) != null) persist();
+        Volunteer removed = cache.remove(nickname);
+        if(removed != null) {
+            persist();
+            if (planRepository != null) {
+                planRepository.removeVolunteerAssignments(nickname);
+            }
+        }
     }
 
     @Override
