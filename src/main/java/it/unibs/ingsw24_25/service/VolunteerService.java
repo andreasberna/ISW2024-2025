@@ -6,6 +6,7 @@ import it.unibs.ingsw24_25.model.MonthlyAvailability;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface VolunteerService extends LoginService{
@@ -17,5 +18,9 @@ public interface VolunteerService extends LoginService{
     List<AssignedShift> loadSchedule(String nickname, YearMonth month);
 
     void assignShifts(String nickname, YearMonth month, List<AssignedShift> shifts);
+
+    Map<String, MonthlyAvailability> snapshotAvailabilities(YearMonth month, LocalDate capturedOn);
+
+    void removeVolunteerAccount(String nickname);
 
 }
