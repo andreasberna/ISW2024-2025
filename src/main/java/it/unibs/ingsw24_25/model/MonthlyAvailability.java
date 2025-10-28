@@ -6,23 +6,33 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Year;
 import java.time.YearMonth;
-import java.util.EnumSet;
-import java.util.Objects;
-import java.util.Set;
+import java.time.temporal.WeekFields;
+import java.util.*;
 
 public final class MonthlyAvailability {
     private YearMonth referenceMonth;
     private EnumSet<DayOfWeek> preferredDays = EnumSet.noneOf(DayOfWeek.class);
     private int weeklyFrequency;
     private LocalDate submittedOn;
+    private boolean snapshot;
+    private LocalDate snapshotCapturedOn;
 
-    public MonthlyAvailability(YearMonth referenceMonth, Set<DayOfWeek> preferredDays, int weeklyFrequency, LocalDate submittedOn) {
+
+    public MonthlyAvailability(YearMonth referenceMonth, Set<DayOfWeek> preferredDays, int weeklyFrequency, LocalDate submittedOn){
+        this(referenceMonth, preferredDays, weeklyFrequency, submittedOn, false, null);
+    }
+
+    public MonthlyAvailability(YearMonth referenceMonth, Set<DayOfWeek> preferredDays,
+                               int weeklyFrequency, LocalDate submittedOn,
+                               boolean snapshot, LocalDate snapshotCapturedOn) {
         this.referenceMonth = referenceMonth;
         setPreferredDays(preferredDays);
         this.weeklyFrequency = weeklyFrequency;
         this.submittedOn = submittedOn;
+        this.snapshot = snapshot;
+        this.snapshotCapturedOn = snapshotCapturedOn;
     }
-    public MonthlyAvailability(){}
+
 
     public LocalDate getSubmittedOn() {
         return submittedOn;
@@ -35,6 +45,39 @@ public final class MonthlyAvailability {
     }
     public int getWeeklyFrequency() {
         return weeklyFrequency;
+    }
+    public boolean isSnapshot() {
+        return snapshot;
+    }
+    public LocalDate getSnapshotCapturedOn() {
+        return snapshotCapturedOn;
+    }
+
+    public MonthlyAvailability createSnapshot(LocalDate capturedOn){
+        LocalDate captureDate = capturedOn == null ? LocalDate.now () : capturedOn;
+        MonthlyAvailability copy = new MonthlyAvailability (referenceMonth, preferredDays, weeklyFrequency, submittedOn, true, captureDate);
+        copy.ensureConsistency ();
+        return copy;
+    }
+    public List<LocalDate> resolveAvailableDates() {
+        ensureConsistency ();
+        List<LocalDate> dates = new ArrayList<> ();
+        WeekFields weekFields = WeekFields.ISO;
+        Map<Integer, Integer> weeklyCounts = new HashMap<> ();
+        LocalDate current = referenceMonth.atDay(1);
+        LocalDate end = referenceMonth.atEndOfMonth();
+        while (!current.isAfter (end)) {
+            if (preferredDays.contains(current.getDayOfWeek())) {
+                int week = current.get (weekFields.weekOfWeekBasedYear());
+                int count = weeklyCounts.getOrDefault(week, 0) + 1;
+                if (count < weeklyFrequency) {
+                    dates.add (current);
+                    weeklyCounts.put (week, count + 1);
+                }
+            }
+            current = current.plusDays(1);
+        }
+        return List.copyOf(dates);
     }
 
     public void validateWindow(LocalDate today){
@@ -65,5 +108,7 @@ public final class MonthlyAvailability {
         this.weeklyFrequency = validateWeeklyFrequency(weeklyFrequency);
         this.referenceMonth = Objects.requireNonNull(referenceMonth);
         this.submittedOn = Objects.requireNonNull(submittedOn);
+        if (snapshot)
+            this.snapshotCapturedOn = Objects.requireNonNull(snapshotCapturedOn);
     }
 }
