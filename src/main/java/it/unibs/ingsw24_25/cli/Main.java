@@ -17,12 +17,14 @@ public class Main {
     private static final Path VOLUNTEERS_FILE = DATA_DIRECTORY.resolve("volunteers.json");
     private static final Path SETTINGS_FILE = DATA_DIRECTORY.resolve("settings.json");
     private static final Path CONFIGURATORS_FILE = DATA_DIRECTORY.resolve("configurators.json");
+    private static final Path MONTHLY_PLANS_FILE = DATA_DIRECTORY.resolve("monthly-plans.json");
 
     public static void main(String[] args) {
-        VolunteerRepository volunteerRepository = createVolunteerRepository();
+        MonthlyVisitPlanRepository monthlyVisitPlanRepository = new JSONMonthlyVisitPlanRepository (MONTHLY_PLANS_FILE);
+        VolunteerRepository volunteerRepository = createVolunteerRepository(monthlyVisitPlanRepository);
         SettingsRepository settingsRepository = createSettingsRepository();
-        ConfiguratorService service = buildService(volunteerRepository, settingsRepository);
         VolunteerService volunteerService = new VolunteerServiceImp (volunteerRepository, settingsRepository);
+        ConfiguratorService service = buildService (volunteerRepository, settingsRepository, monthlyVisitPlanRepository, volunteerService);
         Printer printer = new Printer (System.out);
         PromptReader reader = new PromptReader (new Scanner (System.in));
 
@@ -36,9 +38,9 @@ public class Main {
     }
 
 
-    private static ConfiguratorService buildService(VolunteerRepository volunteerRepository, SettingsRepository settingsRepository) {
-        PlaceRepository placeRepository = new JSONPlaceRepository (PLACES_FILE);
-        VisitTypeRepository visitTypeRepository = new JSONVisitTypeRepository (VISIT_TYPES_FILE);
+    private static ConfiguratorService buildService(VolunteerRepository volunteerRepository, SettingsRepository settingsRepository, MonthlyVisitPlanRepository monthlyVisitPlanRepository, VolunteerService volunteerService) {
+        PlaceRepository placeRepository = new JSONPlaceRepository (PLACES_FILE, monthlyVisitPlanRepository);
+        VisitTypeRepository visitTypeRepository = new JSONVisitTypeRepository (VISIT_TYPES_FILE, monthlyVisitPlanRepository);
         JSONConfiguratorRepository configuratorRepository = new JSONConfiguratorRepository (CONFIGURATORS_FILE);
 
         return new ConfiguratorServiceImp (
@@ -46,15 +48,17 @@ public class Main {
                 visitTypeRepository,
                 volunteerRepository,
                 settingsRepository,
-                configuratorRepository
+                monthlyVisitPlanRepository,
+                configuratorRepository,
+                volunteerService
         );
 
     }
 
-    private static VolunteerRepository createVolunteerRepository() {
-        return new JSONVolunteerRepository (VOLUNTEERS_FILE);
+    private static VolunteerRepository createVolunteerRepository(MonthlyVisitPlanRepository monthlyVisitPlanRepository) {
+        return new JSONVolunteerRepository (VOLUNTEERS_FILE, monthlyVisitPlanRepository);
     }
     private static SettingsRepository createSettingsRepository() {
-        return new JSONSettingsRepository (SETTINGS_FILE);1
+        return new JSONSettingsRepository (SETTINGS_FILE);
     }
 }
