@@ -133,6 +133,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
 
     @Override
     public String addPlace(String name, String description, String location) {
+        ensureCatalogChangeWindowAvailable();
         if (name == null || name.isBlank())
             throw new IllegalArgumentException ("Il nome del luogo non può essere nullo");
 
@@ -147,6 +148,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
 
     @Override
     public String addVisitType(String placeID, String title, String description, String meetLocation, List<TimeSlot> schedules, boolean ticketRequired, int minParticipants, int maxParticipants, LocalDate validFrom, LocalDate validTo) {
+        ensureCatalogChangeWindowAvailable();
         if(placeID == null || placeID.isBlank())
             throw  new IllegalArgumentException ("Identificativo luogo non valido");
 
@@ -192,6 +194,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
 
     @Override
     public void addVolunteer(String nickname, String defaultPassword) {
+        ensureCatalogChangeWindowAvailable();
         String sanitizedNick = requireNonBlank (nickname, "nickname non può essere vuoto");
         String sanitizedPassword = requireNonBlank (defaultPassword, "password non può essere vuoto");
         if(volunteerRepository.findByNickname (nickname).isPresent()) throw new IllegalArgumentException ("Nickname già presente");
@@ -202,6 +205,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
 
     @Override
     public void linkVOlunteerToVisit(String nickname, String visitTypeId) {
+        ensureCatalogChangeWindowAvailable();
         //ricerca in repository del volontario associato al nickname
         Volunteer volunteer = volunteerRepository.findByNickname (nickname)
                 .orElseThrow ( () -> new IllegalArgumentException ("Volontario non trovato"));
@@ -326,21 +330,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
     @Override
     public void applyCatalogChange(Runnable change) {
         Objects.requireNonNull (change, "L'operazione di modifica non può essere nulla");
-        SystemSettings settings = requireInitializedSettings();
-        PlanningPhase phase = settings.getPlanningPhase ();
-        if (phase != PlanningPhase.AVAILABILITY_COLLECTION_CLOSED && phase != PlanningPhase.CATALOG_MANAGEMENT)
-            throw new IllegalStateException ("Le modifiche al catalogo sono consentite solo dopo la chiusura delle disponibilità");
-
-        YearMonth targetMonth = requireActivePlanningMonth(settings);
-        MonthlyVisitPlan plan = requirePlan(targetMonth);
-        if (plan.getPhase () == PlanningPhase.AVAILABILITY_COLLECTION_CLOSED) {
-            plan.setPhase (PlanningPhase.CATALOG_MANAGEMENT);
-            monthlyVisitPlanRepository.save(plan);
-        }
-        if (settings.getPlanningPhase () != PlanningPhase.CATALOG_MANAGEMENT) {
-            settings.setPlanningPhase (PlanningPhase.CATALOG_MANAGEMENT);
-            settingsRepository.save(settings);
-        }
+        ensureCatalogChangeWindowAvailable();
         change.run ();
     }
 
@@ -348,8 +338,9 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
     public MonthlyPlanDTO generateMonthlyPlan(YearMonth targetMonth) {
         Objects.requireNonNull (targetMonth, "Il mese di pianificazione non può essere nullo");
         SystemSettings settings = requireInitializedSettings();
-        if (settings.getPlanningPhase () != PlanningPhase.CATALOG_MANAGEMENT) {
-            throw new IllegalStateException ("Il piano può essere generato solo dopo la gestione del catalogo");
+        PlanningPhase phase = settings.getPlanningPhase();
+        if (phase != PlanningPhase.AVAILABILITY_COLLECTION_CLOSED && phase != PlanningPhase.CATALOG_MANAGEMENT) {
+            throw new IllegalStateException ("Il piano può essere generato solo dopo la chiusura della raccolta disponibilità");
         }
         YearMonth activeMonth = requireActivePlanningMonth(settings);
         if (!activeMonth.equals(targetMonth))
@@ -454,6 +445,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
 
     @Override
     public void removePlace(String placeId) {
+        ensureCatalogChangeWindowAvailable();
         String sanitizedId = requireNonBlank(placeId, "L'identificativo del luogo non può essere vuoto");
         Place place = placeRepository.findById(sanitizedId)
                 .orElseThrow(() -> new IllegalArgumentException("Luogo non trovato: " + sanitizedId));
@@ -473,6 +465,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
 
     @Override
     public void removeVisitType(String visitTypeId) {
+        ensureCatalogChangeWindowAvailable();
         String sanitizedId = requireNonBlank(visitTypeId, "L'identificativo del tipo visita non può essere vuoto");
         VisitType visitType = resolveVisitTypeByIdentifier(sanitizedId);
 
@@ -484,6 +477,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
 
     @Override
     public void removeVolunteer(String nickname) {
+        ensureCatalogChangeWindowAvailable();
         String sanitizedNick = requireNonBlank(nickname, "Il nickname non può essere vuoto");
         Volunteer volunteer = volunteerRepository.findByNickname(sanitizedNick)
                 .orElseThrow(() -> new IllegalArgumentException("Volontario non trovato: " + sanitizedNick));
@@ -669,6 +663,20 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
                 settings.setPlanningPhase(PlanningPhase.REVIEW);
                 settingsRepository.save(settings);
             }
+        });
+    }
+
+    private void ensureCatalogChangeWindowAvailable(){
+        settingsRepository.load().ifPresent(settings -> {
+            YearMonth activeMonth = settings.getActivePlanningMonth ();
+            if (activeMonth == null) {
+                return;
+            }
+            PlanningPhase phase = settings.getPlanningPhase();
+            if (phase.ordinal () < PlanningPhase.PLAN_GENERATED.ordinal ())
+                throw new IllegalStateException ("Le modifiche al catalogo sono consentite solo dopo la generazione del piano mensile");
+            if (phase == PlanningPhase.READY_FOR_NEXT_CYCLE || phase == PlanningPhase.AVAILABILITY_COLLECTION_OPEN)
+                throw new IllegalStateException ("Le modifiche al catalogo non sono consentite dopo la riapertura della raccolta disponibilità");
         });
     }
 
