@@ -450,17 +450,20 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
         Place place = placeRepository.findById(sanitizedId)
                 .orElseThrow(() -> new IllegalArgumentException("Luogo non trovato: " + sanitizedId));
 
-        List<String> visitIds = place.getVisits() == null ? List.of() : place.getVisits().stream()
+        List<VisitType> visits = Optional.ofNullable(visitTypeRepository.findByPlace (sanitizedId)).orElse (List.of());
+        List<String> visitIds = visits.stream()
                 .filter(Objects::nonNull)
                 .map(VisitType::getId)
                 .filter(Objects::nonNull)
                 .toList();
 
-        for (String visitId : visitIds) {
-            removeVisitType(visitId);
+        for (VisitType visit : visits) {
+            removeVisitTypeCascade(visit, false, false);
         }
 
+        monthlyVisitPlanRepository.removePlannedVisitsByVisitTypes (visitIds);
         placeRepository.deleteById(sanitizedId);
+        promoteReviewPhaseIfNeeded ();
     }
 
     @Override
@@ -469,10 +472,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
         String sanitizedId = requireNonBlank(visitTypeId, "L'identificativo del tipo visita non può essere vuoto");
         VisitType visitType = resolveVisitTypeByIdentifier(sanitizedId);
 
-        detachVisitFromPlace(visitType);
-        purgeVisitFromVolunteers(visitType.getId());
-        visitTypeRepository.deleteById(visitType.getId());
-        promoteReviewPhaseIfNeeded();
+        removeVisitTypeCascade(visitType, true, true);
     }
 
     @Override
@@ -482,19 +482,25 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
         Volunteer volunteer = volunteerRepository.findByNickname(sanitizedNick)
                 .orElseThrow(() -> new IllegalArgumentException("Volontario non trovato: " + sanitizedNick));
 
-        List<String> visitIds = volunteer.getVisitsAttending().stream()
+        Map<String, VisitType> visits = volunteer.getVisitsAttending().stream()
                 .filter(Objects::nonNull)
-                .map(VisitType::getId)
+                .map(visit -> visitTypeRepository.findById(visit.getId ()).orElse(visit))
                 .filter(Objects::nonNull)
-                .toList();
-        for (String visitId : visitIds) {
-            visitTypeRepository.findById(visitId).ifPresent(visit -> {
-                visit.getGuides().removeIf(guide -> sanitizedNick.equals(guide.getNickname()));
-                visitTypeRepository.save(visit);
-            });
+                .collect (Collectors.toMap (VisitType::getId, visit -> visit, (left,right) -> left, LinkedHashMap::new ));
+        List<VisitType> orphanedVisits = new ArrayList<>();
+        for (VisitType visit : visits.values ()) {
+            if (visit.getGuides () != null) visit.getGuides().removeIf (guide -> sanitizedNick.equals(guide.getNickname ()));
+            if (visit.getGuides () == null || visit.getGuides ().isEmpty ()){
+                orphanedVisits.add(visit);
+            }else visitTypeRepository.save(visit);
         }
 
+        monthlyVisitPlanRepository.removeVolunteerAssignments (sanitizedNick);
         volunteerService.removeVolunteerAccount(sanitizedNick);
+        for (VisitType visit : orphanedVisits.stream().collect(Collectors.toMap(VisitType::getId, v -> v, (left, right) -> left, LinkedHashMap::new)).values()) {
+            removeVisitTypeCascade(visit, true, true);
+        }
+
         promoteReviewPhaseIfNeeded();
     }
 
@@ -511,8 +517,18 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
         if (completedMonth != null) {
             monthlyVisitPlanRepository.findByMonth(completedMonth).ifPresent(plan -> {
                 plan.setPhase(PlanningPhase.READY_FOR_NEXT_CYCLE);
+                plan.setAvailabilitySnapshots(Map.of());
                 monthlyVisitPlanRepository.save(plan);
             });
+            for (Volunteer volunteer : volunteerRepository.findAll()) {
+                if (volunteer == null) {
+                    continue;
+                }
+                if (volunteer.findAvailability(completedMonth).isPresent()) {
+                    volunteer.removeAvailability(completedMonth);
+                    volunteerRepository.save(volunteer);
+                }
+            }
         }
 
         YearMonth desiredMonth = PlanningWindowPolicy.resolveNextPlanningMonth(today);
@@ -596,8 +612,13 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
         if (place == null || place.getPlaceTitle() == null) {
             return;
         }
+        String visitId = visitType.getId();
         placeRepository.findById(place.getPlaceTitle()).ifPresent(loaded -> {
-            loaded.removeVisit(visitType);
+            List<VisitType> remaining = loaded.getVisits().stream()
+                    .filter(Objects::nonNull)
+                    .filter(candidate -> visitId == null || !visitId.equals(candidate.getId()))
+                    .toList();
+            loaded.setVisits(remaining);
             placeRepository.save(loaded);
         });
     }
@@ -618,6 +639,9 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
     }
 
     private void purgeVisitFromVolunteers(String visitTypeId) {
+        if (visitTypeId == null) {
+            return;
+        }
         List<Volunteer> volunteers = new ArrayList<>(volunteerRepository.findAll());
         Set<String> removedVolunteers = new HashSet<>();
         for (Volunteer volunteer : volunteers) {
@@ -637,8 +661,39 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
         }
         for (String nickname : removedVolunteers) {
             volunteerService.removeVolunteerAccount(nickname);
+            monthlyVisitPlanRepository.removeVolunteerAssignments(nickname);
         }
     }
+
+    private void removeVisitTypeCascade(VisitType visitType, boolean allowPlaceCascade, boolean removeFromPlans) {
+        if (visitType == null) {
+            return;
+        }
+        String visitId = visitType.getId();
+        String placeId = Optional.ofNullable(visitType.getPlace())
+                .map(Place::getPlaceTitle)
+                .orElse(null);
+
+        detachVisitFromPlace(visitType);
+        purgeVisitFromVolunteers(visitId);
+        if (removeFromPlans) {
+            monthlyVisitPlanRepository.removePlannedVisitsByVisitType(visitId);
+        }
+        if (visitId != null) {
+            visitTypeRepository.deleteById(visitId);
+        }
+        if (allowPlaceCascade && placeId != null) {
+            placeRepository.findById(placeId).ifPresent(loaded -> {
+                boolean hasVisits = loaded.getVisits().stream()
+                        .anyMatch (Objects::nonNull);
+                if (!hasVisits) {
+                    placeRepository.deleteById(placeId);
+                }
+            });
+        }
+        promoteReviewPhaseIfNeeded();
+    }
+
 
     private boolean purgeShiftsForVisit(Volunteer volunteer, String visitTypeId) {
         boolean updated = false;
