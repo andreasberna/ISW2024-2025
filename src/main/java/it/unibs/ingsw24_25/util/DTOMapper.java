@@ -91,6 +91,46 @@ public final class DTOMapper {
         );
     }
 
+    public static VisitOccurrenceDTO toVisitOccurrenceDTO(MonthlyVisitPlan plan,
+                                                          PlannedVisit plannedVisit,
+                                                          VisitType visitType,
+                                                          boolean includeBookings) {
+        if (plannedVisit == null) {
+            return null;
+        }
+        TimeSlot slot = plannedVisit.getTimeSlot();
+        List<VisitBookingDTO> bookingDTOs = includeBookings
+                ? plannedVisit.getBookings().stream()
+                .map(booking -> new VisitBookingDTO(
+                        booking.getCode(),
+                        booking.getBeneficiaryName(),
+                        booking.getParticipants(),
+                        booking.getNotes(),
+                        plannedVisit.getDate (),
+                        visitType != null ? visitType.getVisitTitle () : plannedVisit.getVisitTypeId (),
+                        plannedVisit.getStatus ()
+                ))
+                .toList()
+                : List.of();
+
+        return new VisitOccurrenceDTO(
+                plannedVisit.getId(),
+                plan.getTargetMonth(),
+                plannedVisit.getDate(),
+                slot != null ? slot.getStartTime() : null,
+                visitType != null ? visitType.getVisitTitle() : plannedVisit.getVisitTypeId(),
+                visitType != null ? visitType.getVisitDescription() : "",
+                visitType != null ? visitType.getVisitMeetLocation() : "",
+                visitType != null && Boolean.TRUE.equals(visitType.getTicketRequired()),
+                visitType != null ? visitType.getMinParticipants() : 0,
+                visitType != null ? visitType.getMaxParticipants() : 0,
+                plannedVisit.getBookedParticipants(),
+                plannedVisit.getStatus(),
+                plannedVisit.getVisitTypeId(),
+                bookingDTOs
+        );
+    }
+
     private static PlannedVisitDTO toPlannedVisitDTO(MonthlyVisitPlan plan,
                                                      PlannedVisit visit,
                                                      VisitType visitType) {
