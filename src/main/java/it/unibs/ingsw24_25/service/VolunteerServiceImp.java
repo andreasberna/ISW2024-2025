@@ -1,22 +1,34 @@
 package it.unibs.ingsw24_25.service;
 
+import it.unibs.ingsw24_25.DTO.VisitOccurrenceDTO;
 import it.unibs.ingsw24_25.model.*;
+import it.unibs.ingsw24_25.repository.MonthlyVisitPlanRepository;
 import it.unibs.ingsw24_25.repository.SettingsRepository;
+import it.unibs.ingsw24_25.repository.VisitTypeRepository;
 import it.unibs.ingsw24_25.repository.VolunteerRepository;
+import it.unibs.ingsw24_25.util.DTOMapper;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class VolunteerServiceImp implements VolunteerService{
 
     private final VolunteerRepository volunteerRepository;
     private final SettingsRepository settingsRepository;
+    private final MonthlyVisitPlanRepository monthlyVisitPlanRepository;
+    private final VisitTypeRepository visitTypeRepository;
     private final Set<String> defaultCredentialsValidated = new HashSet<> ();
 
-    public VolunteerServiceImp(VolunteerRepository volunteerRepository, SettingsRepository settingsRepository) {
+    public VolunteerServiceImp(VolunteerRepository volunteerRepository,
+                               SettingsRepository settingsRepository,
+                               MonthlyVisitPlanRepository monthlyVisitPlanRepository,
+                               VisitTypeRepository visitTypeRepository) {
         this.volunteerRepository = Objects.requireNonNull(volunteerRepository);
         this.settingsRepository = Objects.requireNonNull(settingsRepository);
+        this.monthlyVisitPlanRepository = Objects.requireNonNull(monthlyVisitPlanRepository);
+        this.visitTypeRepository = Objects.requireNonNull(visitTypeRepository);
     }
 
 
@@ -82,6 +94,26 @@ public class VolunteerServiceImp implements VolunteerService{
         volunteer.deactivate ();
         volunteerRepository.deleteByNickname (volunteer.getNickname ());
         defaultCredentialsValidated.remove(volunteer.getNickname ());
+    }
+    @Override
+    public List<VisitOccurrenceDTO> loadConfirmedGuidedVisits(String nickname, YearMonth month) {
+        Objects.requireNonNull (month);
+        Volunteer volunteer = loadVolunteer(nickname);
+        MonthlyVisitPlan plan = monthlyVisitPlanRepository.findByMonth (month).orElse (null);
+        if (plan == null) {return List.of();}
+
+        Map<String, VisitType> visitTypes = visitTypeRepository.findAll ().stream ()
+                .filter (Objects::nonNull)
+                .collect(Collectors.toMap(VisitType::getId, visit -> visit, (left, right) -> left));
+        return plan.getPlannedVisits ().stream ()
+                .filter (Objects::nonNull)
+                .filter (visit -> visit.getStatus () == VisitStatus.CONFIRMED)
+                .filter (visit -> visit.getAssignedVolunteerIds ().contains (volunteer.getNickname ()))
+                .map (visit -> DTOMapper.toVisitOccurrenceDTO (plan, visit, visitTypes.get (visit.getVisitTypeId ()), true))
+                .filter (Objects::nonNull)
+                .sorted (Comparator.comparing (VisitOccurrenceDTO::getDate)
+                        .thenComparing (VisitOccurrenceDTO::getStartTime, Comparator.nullsLast (Comparator.naturalOrder ())))
+                .toList ();
     }
 
     private Volunteer loadVolunteer(String nickname){

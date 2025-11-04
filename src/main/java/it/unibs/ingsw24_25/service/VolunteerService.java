@@ -1,5 +1,6 @@
 package it.unibs.ingsw24_25.service;
 
+import it.unibs.ingsw24_25.DTO.VisitOccurrenceDTO;
 import it.unibs.ingsw24_25.model.AssignedShift;
 import it.unibs.ingsw24_25.model.MonthlyAvailability;
 
@@ -23,4 +24,5 @@ public interface VolunteerService extends LoginService{
 
     void removeVolunteerAccount(String nickname);
 
+    List<VisitOccurrenceDTO> loadConfirmedGuidedVisits(String nickname, YearMonth month);
 }
