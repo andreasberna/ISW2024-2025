@@ -150,9 +150,18 @@ public class JSONMonthlyVisitPlanRepository implements MonthlyVisitPlanRepositor
             if (slot == null) {
                 continue;
             }
-            TimeSlot clonedSlot = new TimeSlot (slot.getDay(), slot.getStartTime(), slot.getDuration());
-            PlannedVisit cloned = new PlannedVisit(visit.getDate(), clonedSlot, visit.getVisitTypeId(),
-                    visit.isProposable(), visit.getAssignedVolunteerIds());
+            TimeSlot clonedSlot = new TimeSlot (slot.getDay (), slot.getStartTime (), slot.getDuration ());
+            PlannedVisit cloned = new PlannedVisit (
+                    visit.getId (),
+                    visit.getDate (),
+                    clonedSlot,
+                    visit.getVisitTypeId (),
+                    visit.isProposable (),
+                    visit.getAssignedVolunteerIds (),
+                    visit.getStatus (),
+                    visit.getBookings ()
+            );
+
             copy.add(cloned);
         }
         return copy;
