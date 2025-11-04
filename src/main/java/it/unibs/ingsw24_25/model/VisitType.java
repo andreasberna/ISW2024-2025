@@ -21,7 +21,7 @@ public class VisitType {
     private List<Volunteer> guides;
     private VisitState state;
     private LocalDate visitDate;
-    private LocalDate enrollmentDeadline= visitDate.minusDays(3);
+    private LocalDate enrollmentDeadline;
     private int enrolled;
 
     public VisitType(String visitTitle, String visitDescription, String visitMeetLocation,
@@ -92,7 +92,7 @@ public class VisitType {
     public void updateState(LocalDate today){
         if (visitDate == null){return;}
 
-        LocalDate deadline = visitDate.minusDays (3);
+        LocalDate deadline = enrollmentDeadline != null ? enrollmentDeadline : visitDate.minusDays (3);
 
         switch (state) {
             case PROPOSTA -> {
@@ -248,6 +248,19 @@ public class VisitType {
     }
     public void setGuides(List<Volunteer> guides) {
         this.guides = guides == null ? new ArrayList<> () : new ArrayList<>(guides);
+    }
+    public LocalDate getVisitDate() {
+        return visitDate;
+    }
+    public void setVisitDate(LocalDate visitDate) {
+        this.visitDate = visitDate;
+        this.enrollmentDeadline = visitDate == null ? null : visitDate.minusDays(3);
+    }
+    public LocalDate getEnrollmentDeadline() {
+        return enrollmentDeadline;
+    }
+    public void setEnrollmentDeadline(LocalDate enrollmentDeadline) {
+        this.enrollmentDeadline = enrollmentDeadline;
     }
     public VisitState getState() {
         return state;

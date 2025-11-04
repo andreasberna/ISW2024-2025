@@ -58,8 +58,13 @@ public class MonthlyVisitPlan {
         return Collections.unmodifiableList(plannedVisits);
     }
     public void setPlannedVisits(List<PlannedVisit> plannedVisits) {
-        if (plannedVisits == null) this.plannedVisits = new ArrayList<>();
-        else this.plannedVisits = new ArrayList<>(plannedVisits);
+        this.plannedVisits = new ArrayList<>();
+        if (plannedVisits == null) {return;}
+
+        plannedVisits.stream()
+                .filter(Objects::nonNull)
+                .map(this::copyVisit)
+                .forEach (this.plannedVisits::add);
     }
     public Map<String, MonthlyAvailability> getAvailabilitySnapshots() {
         return Collections.unmodifiableMap(availabilitySnapshots);
@@ -89,17 +94,21 @@ public class MonthlyVisitPlan {
 
     public void addPlannedVisit(PlannedVisit plannedVisit) {
         Objects.requireNonNull(plannedVisit, "La visita pianificata non può essere nulla");
-        this.plannedVisits.add(plannedVisit);
+        this.plannedVisits.add(copyVisit(plannedVisit));
     }
 
     public void removePlannedVisit(PlannedVisit plannedVisit) {
-        this.plannedVisits.remove(plannedVisit);
+       if (plannedVisit == null) {return;}
+       this.plannedVisits.removeIf (visit -> visit != null && Objects.equals(visit.getId(), plannedVisit.getId()));
     }
 
     public void replacePlannedVisits(List<PlannedVisit> newPlannedVisits) {
         this.plannedVisits.clear();
         if (newPlannedVisits != null) {
-            this.plannedVisits.addAll(newPlannedVisits);
+            newPlannedVisits.stream()
+                    .filter(Objects::nonNull)
+                    .map (this::copyVisit)
+                    .forEach (this.plannedVisits::add);
         }
     }
 
@@ -140,6 +149,33 @@ public class MonthlyVisitPlan {
                 availability.getSubmittedOn(),
                 availability.isSnapshot(),
                 availability.getSnapshotCapturedOn()
+        );
+    }
+
+    public Optional<PlannedVisit> findVisitById(String visitId) {
+        if (visitId == null || visitId.isBlank ()) return Optional.empty();
+
+        return plannedVisits.stream()
+                .filter (Objects::nonNull)
+                .filter (visit -> visitId.equals (visit.getId()))
+                .findFirst ();
+    }
+
+    private PlannedVisit copyVisit(PlannedVisit visit) {
+        if (visit == null) return null;
+
+        TimeSlot slot = visit.getTimeSlot();
+        TimeSlot clonedSlot = slot == null ? null : new TimeSlot (slot.getDay (), slot.getStartTime (), slot.getDuration ());
+
+        return new PlannedVisit (
+                visit.getId(),
+                visit.getDate (),
+                clonedSlot,
+                visit.getVisitTypeId (),
+                visit.isProposable (),
+                visit.getAssignedVolunteerIds (),
+                visit.getStatus(),
+                visit.getBookings()
         );
     }
 }
