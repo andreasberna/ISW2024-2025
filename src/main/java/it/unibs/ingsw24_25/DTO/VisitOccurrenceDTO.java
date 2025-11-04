@@ -7,7 +7,7 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.List;
 
-public class VisitOccurenceDTO {
+public class VisitOccurrenceDTO {
 
     private final String id;
     private final YearMonth month;
@@ -24,20 +24,20 @@ public class VisitOccurenceDTO {
     private final String visitTypeId;
     private final List<VisitBookingDTO> bookings;
 
-    public VisitOccurenceDTO(String id,
-                             YearMonth month,
-                             LocalDate date,
-                             LocalTime startTime,
-                             String title,
-                             String description,
-                             String meetingPoint,
-                             boolean ticketRequired,
-                             int minParticipants,
-                             int maxParticipants,
-                             int bookedParticipants,
-                             VisitStatus status,
-                             String visitTypeId,
-                             List<VisitBookingDTO> bookings) {
+    public VisitOccurrenceDTO(String id,
+                              YearMonth month,
+                              LocalDate date,
+                              LocalTime startTime,
+                              String title,
+                              String description,
+                              String meetingPoint,
+                              boolean ticketRequired,
+                              int minParticipants,
+                              int maxParticipants,
+                              int bookedParticipants,
+                              VisitStatus status,
+                              String visitTypeId,
+                              List<VisitBookingDTO> bookings) {
         this.id = id;
         this.month = month;
         this.date = date;
