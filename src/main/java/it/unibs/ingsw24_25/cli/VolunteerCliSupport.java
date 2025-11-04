@@ -1,5 +1,7 @@
 package it.unibs.ingsw24_25.cli;
 
+import it.unibs.ingsw24_25.DTO.VisitBookingDTO;
+import it.unibs.ingsw24_25.DTO.VisitOccurrenceDTO;
 import it.unibs.ingsw24_25.model.AssignedShift;
 import it.unibs.ingsw24_25.model.MonthlyAvailability;
 import it.unibs.ingsw24_25.model.TimeSlot;
@@ -9,16 +11,15 @@ import java.time.DayOfWeek;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
+import java.util.*;
 
 public class VolunteerCliSupport {
     private static final String VOLUNTEER_AVAILABILITY_HEADER = "Disponibilità registrata per %s nel mese %s:";
     private static final String VOLUNTEER_NO_AVAILABILITY = "Nessuna disponibilità registrata per %s nel mese %s.";
     private static final String VOLUNTEER_SCHEDULE_HEADER = "Turni assegnati a %s nel mese %s:";
     private static final String VOLUNTEER_NO_SHIFTS = "Nessun turno assegnato a %s per il mese %s.";
+    private static final String VOLUNTEER_CONFIRMED_HEADER = "Visite confermate per %s nel mese %s:";
+    private static final String VOLUNTEER_NO_CONFIRMED = "Nessuna visita confermata per %s nel mese %s.";
 
     private VolunteerCliSupport() {
     }
@@ -71,6 +72,52 @@ public class VolunteerCliSupport {
                 })
                 .map(VolunteerCliSupport::formatShift)
                 .forEach(printer::println);
+    }
+
+    static void displayConfirmedVisits(VolunteerService service,
+                                       Printer printer,
+                                       String nickname,
+                                       YearMonth month,
+                                       DateTimeFormatter formatter) {
+        Objects.requireNonNull(service, "Service non può essere nullo");
+        Objects.requireNonNull(printer, "Printer non può essere nullo");
+        Objects.requireNonNull(nickname, "Nickname non può essere nullo");
+        Objects.requireNonNull(month, "Il mese non può essere nullo");
+
+        DateTimeFormatter effectiveFormatter = formatter == null ? DateTimeFormatter.ofPattern("yyyy-MM") : formatter;
+
+        List<VisitOccurrenceDTO> visits = service.loadConfirmedGuidedVisits (nickname, month);
+        if (visits.isEmpty()) {
+            printer.println (VOLUNTEER_NO_CONFIRMED.formatted(nickname, month.format(effectiveFormatter)));
+            return;
+        }
+
+        printer.println (VOLUNTEER_CONFIRMED_HEADER.formatted(nickname, month.format(effectiveFormatter)));
+        visits.stream()
+                .sorted(Comparator.comparing(VisitOccurrenceDTO::getDate)
+                        .thenComparing(VisitOccurrenceDTO::getStartTime, Comparator.nullsLast (Comparator.naturalOrder ())))
+                .map (VolunteerCliSupport::formatConfirmedVisit)
+                .forEach(printer::println);
+    }
+
+    private static String formatConfirmedVisit(VisitOccurrenceDTO visit) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("- ").append(visit.getDate()).append(" | ").append(visit.getTitle()).append(System.lineSeparator());
+        builder.append("  Orario: ").append(visit.getStartTime() == null ? "-" : visit.getStartTime()).append(System.lineSeparator());
+        builder.append("  Ritrovo: ").append(visit.getMeetingPoint()).append(System.lineSeparator());
+        builder.append("  Partecipanti: ").append(visit.getBookedParticipants()).append(" / ").append(visit.getMaxParticipants()).append(System.lineSeparator());
+        if (!visit.getBookings().isEmpty()) {
+            builder.append("  Prenotazioni:").append(System.lineSeparator());
+            for (VisitBookingDTO booking : visit.getBookings()) {
+                builder.append("    * ").append(booking.getBeneficiaryName()).append(" - ")
+                        .append(booking.getParticipants()).append(" partecipanti");
+                if (booking.getNotes() != null && !booking.getNotes().isBlank()) {
+                    builder.append(" | Note: ").append(booking.getNotes());
+                }
+                builder.append(System.lineSeparator());
+            }
+        }
+        return builder.toString();
     }
 
     private static void printAvailability(Printer printer, String nickname, MonthlyAvailability availability) {

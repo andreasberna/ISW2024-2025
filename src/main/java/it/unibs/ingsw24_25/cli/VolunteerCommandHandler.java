@@ -28,6 +28,7 @@ public class VolunteerCommandHandler {
     private static final String VOLUNTEER_SELF_MENU_SUBMIT_OPTION = "1 - Invia disponibilità mensile";
     private static final String VOLUNTEER_SELF_MENU_AVAILABILITY_OPTION = "2 - Visualizza disponibilità mensile";
     private static final String VOLUNTEER_SELF_MENU_SHIFTS_OPTION = "3 - Visualizza turni assegnati";
+    private static final String VOLUNTEER_SELF_MENU_CONFIRMED_OPTION = "4 - Visite confermate da guidare";
     private static final String VOLUNTEER_SELF_MENU_BACK_OPTION = "back - Esci";
     private static final String VOLUNTEER_MONTH_PROMPT = "Inserisci il mese di riferimento (yyyy-MM): ";
     private static final String VOLUNTEER_WEEKLY_FREQUENCY_PROMPT = "Quante disponibilità settimanali puoi garantire? ";
@@ -65,6 +66,8 @@ public class VolunteerCommandHandler {
         router.register("3", this::showVolunteerSchedule);
         router.register("turni", this::showVolunteerSchedule);
         router.register("shifts", this::showVolunteerSchedule);
+        router.register ("4", this::showConfirmedVisits);
+        router.register ("visits", this::showConfirmedVisits);
         return router;
     }
 
@@ -132,6 +135,7 @@ public class VolunteerCommandHandler {
             printer.println(VOLUNTEER_SELF_MENU_SUBMIT_OPTION);
             printer.println(VOLUNTEER_SELF_MENU_AVAILABILITY_OPTION);
             printer.println(VOLUNTEER_SELF_MENU_SHIFTS_OPTION);
+            printer.println(VOLUNTEER_SELF_MENU_CONFIRMED_OPTION);
             printer.println(VOLUNTEER_SELF_MENU_BACK_OPTION);
             printer.println(MENU_SEPARATOR);
 
@@ -215,6 +219,19 @@ public class VolunteerCommandHandler {
         try {
             VolunteerCliSupport.displaySchedule(volunteerService, printer, nickname, month, YEAR_MONTH_INPUT_FORMATTER);
         } catch (IllegalArgumentException | IllegalStateException ex) {
+            printer.println(ERROR_PREFIX + safeMessage(ex));
+        }
+        return true;
+    }
+
+    private boolean showConfirmedVisits() {
+        String nickname = requireActiveVolunteerNickname();
+        YearMonth month = readYearMonthAllowingBack(VOLUNTEER_MONTH_PROMPT);
+        if (month == null) {return true;}
+
+        try{
+            VolunteerCliSupport.displayConfirmedVisits(volunteerService, printer, nickname, month, YEAR_MONTH_INPUT_FORMATTER);
+        } catch (IllegalArgumentException | IllegalStateException ex){
             printer.println(ERROR_PREFIX + safeMessage(ex));
         }
         return true;

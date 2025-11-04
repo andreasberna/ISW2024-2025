@@ -17,15 +17,19 @@ public class CliApp implements Runnable {
     private final Printer printer;
     private final ConfiguratorCommandHandler configuratorHandler;
     private final VolunteerCommandHandler volunteerHandler;
+    private final BeneficiaryCommandHandler beneficiaryHandler;
 
     private volatile boolean running;
 
     public CliApp(PromptReader reader, Printer printer,
-                  ConfiguratorCommandHandler configuratorHandler, VolunteerCommandHandler volunteerHandler) {
+                  ConfiguratorCommandHandler configuratorHandler,
+                  VolunteerCommandHandler volunteerHandler,
+                  BeneficiaryCommandHandler beneficiaryHandler) {
         this.reader = Objects.requireNonNull(reader, "reader non puù essere nullo");
         this.printer = Objects.requireNonNull(printer, "printer non può essere nullo");
         this.configuratorHandler = Objects.requireNonNull (configuratorHandler, "configuratorHandler non può essere nullo");
         this.volunteerHandler = Objects.requireNonNull (volunteerHandler, "volunteerHandler non può essere nullo");
+        this.beneficiaryHandler = Objects.requireNonNull (beneficiaryHandler, "BeneficiaryHandler non può essere nullo");
     }
 
     @Override
@@ -54,6 +58,7 @@ public class CliApp implements Runnable {
             switch (normalized) {
                 case "1", "config", "configuratore", "configurator" -> configuratorHandler.startSession ();
                 case "2", "volontario", "volunteer" -> volunteerHandler.startSession ();
+                case "3", "fruitore", "beneficiario" ->  beneficiaryHandler.startSession ();
                 default -> printer.println (INVALID_COMMAND_MESSAGE);
             }
         }
@@ -69,6 +74,7 @@ public class CliApp implements Runnable {
         printer.println("Seleziona il profilo di accesso");
         printer.println("1 - Configuratore");
         printer.println("2 - Volontario");
+        printer.println("3 - Fruitore");
         printer.println("exit - Esci");
         printer.println(MENU_SEPARATOR);
     }
