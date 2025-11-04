@@ -111,6 +111,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
             return;
         }
 
+
         int DEFAULT_MAXPARTICIPANTS = 15;
 
         settingsRepository.save(new SystemSettings(scope, DEFAULT_MAXPARTICIPANTS, List.of ()));
