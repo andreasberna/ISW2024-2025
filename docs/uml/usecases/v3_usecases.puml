@@ -1,0 +1,80 @@
+@startuml
+left to right direction
+skinparam usecase {
+  BorderColor #555
+  BackgroundColor #f9f9f9
+}
+
+actor Configuratore
+
+rectangle "Sistema Visite – V3" as Sistema {
+  package "Pianificazione visite" {
+    usecase "UC1 Chiudere raccolta disponibilità\ne generare piano visite" as UC1
+  }
+
+  package "Gestione luoghi" {
+    usecase "UC2 Rimuovere luogo\ncon rinvii a cascata" as UC2
+    usecase "UC3 Rimuovere luogo\nsenza rinvii a cascata" as UC3
+  }
+
+  package "Gestione volontari" {
+    usecase "UC4 Aggiungere volontario\na tipo di visita" as UC4
+    usecase "UC5 Rimuovere volontario\ncon rinvii a cascata" as UC5
+    usecase "UC6 Rimuovere volontario\nsenza rinvii a cascata" as UC6
+  }
+
+  package "Gestione tipi di visita" {
+    usecase "UC7 Rimuovere tipo di visita\ncon rinvii a cascata" as UC7
+    usecase "UC8 Rimuovere tipo di visita\nsenza rinvii a cascata" as UC8
+  }
+
+  package "Gestione disponibilità" {
+    usecase "UC9 Attivare disponibilità" as UC9
+    usecase "UC10 Disattivare disponibilità" as UC10
+  }
+
+  package "Gestione calendario visite" {
+    usecase "UC11 Aggiornare data e ora\ndi una visita" as UC11
+  }
+}
+
+Configuratore -- UC1
+Configuratore -- UC2
+Configuratore -- UC3
+Configuratore -- UC4
+Configuratore -- UC5
+Configuratore -- UC6
+Configuratore -- UC7
+Configuratore -- UC8
+Configuratore -- UC9
+Configuratore -- UC10
+Configuratore -- UC11
+
+note right of UC1
+  Include la verifica stato disponibilità
+  e il calcolo del piano con conflitti
+  da risolvere manualmente.
+end note
+
+note right of UC2
+  Rimuove il luogo e tutte le entità
+  correlate con ricalcolo del piano.
+end note
+
+note right of UC5
+  Dopo la rimozione del volontario,
+  le visite impattate vengono aggiornate
+  e pianificate nuovamente.
+end note
+
+note bottom of UC7
+  Eliminando il tipo di visita vengono
+  rimossi i volontari e le visite collegate.
+end note
+
+note right of UC9
+  Solo le disponibilità importate e
+  non scadute possono essere attivate.
+end note
+
+@enduml
