@@ -1,0 +1,47 @@
+@startuml
+left to right direction
+skinparam usecase {
+  BorderColor #555
+  BackgroundColor #f9f9f9
+}
+
+actor Volontario
+
+rectangle "Sistema Visite – V2" as Sistema {
+  package "Accesso e sessione" {
+    usecase "UC1 Effettuare il primo accesso" as UC1
+    usecase "UC2 Impostare credenziali personali" as UC2
+    usecase "UC3 Accedere con credenziali personali" as UC3
+    usecase "UC7 Effettuare logout" as UC7
+  }
+
+  package "Consultazione e disponibilità" {
+    usecase "UC4 Visualizzare tipologie di visite associate" as UC4
+    usecase "UC5 Dichiarare disponibilità" as UC5
+    usecase "UC6 Visualizzare calendario personale" as UC6
+  }
+}
+
+' Associazioni attore -> UC
+Volontario -- UC1
+Volontario -- UC2
+Volontario -- UC3
+Volontario -- UC4
+Volontario -- UC5
+Volontario -- UC6
+Volontario -- UC7
+
+' Relazioni include/extend
+UC1 ..> UC2 : <<include>>
+
+note right of UC5
+  La dichiarazione riguarda date e fasce orarie
+  per le tipologie di visita associate al volontario.
+end note
+
+note right of UC6
+  Filtri disponibili: Prossime, Effettuate,
+  Annullate.
+end note
+
+@enduml
