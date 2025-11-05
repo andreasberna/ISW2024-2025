@@ -1,0 +1,80 @@
+@startuml
+left to right direction
+title Sistema visite guidate – Casi d'uso versione 4.0
+
+actor "Fruitore" as Fruitore
+actor "Volontario" as Volontario
+
+rectangle "Front-end visite guidate" {
+  usecase "UC1 – Registrazione nuovo fruitore" as UC1
+  note right of UC1
+    * Scopo/Valore: creare credenziali personali per accedere al front-end.
+    * Precondizioni: applicazione operativa; fruitore non ancora registrato.
+    * Postcondizioni: username e password salvati; generato codice prenotazione.
+    * Trigger: primo accesso dal front-end con scelta di registrarsi.
+    * Flusso principale: \n      1) seleziona "Registrati" -> 2) il sistema richiede i dati personali ->\n      3) inserisce dati e conferma -> 4) il sistema valida ->\n      5) genera credenziali e codice prenotazione -> 6) mostra conferma.
+    * Flussi alternativi: \n      A) dati mancanti -> il sistema chiede integrazione e torna alla validazione;\n      B) password debole -> richiede nuova password e torna alla validazione;\n      C) username già in uso -> richiede nuovo username e torna alla validazione.
+    * Errori: problemi di salvataggio registrati nei log con messaggio all'utente.
+    * Regole/Vincoli: password >= 8 caratteri con maiuscole, minuscole e numeri; username univoco.
+  end note
+
+  usecase "UC2 – Visualizzare visite disponibili" as UC2
+  note right of UC2
+    * Scopo/Valore: consultare visite proposte, confermate e cancellate.
+    * Precondizioni: fruitore autenticato con credenziali valide; esistono visite in catalogo.
+    * Postcondizioni: elenco aggiornato con titolo, descrizione, stato e posti disponibili.
+    * Trigger: selezione della voce "Visite disponibili".
+    * Flusso principale: \n      1) seleziona la voce -> 2) il sistema mostra l'elenco per stato proposta/confermata/cancellata ->\n      3) il fruitore applica filtri per stato -> 4) il sistema aggiorna la lista ->\n      5) seleziona una visita -> 6) il sistema mostra i dettagli.
+    * Flussi alternativi: \n      A) nessuna visita disponibile -> messaggio informativo;\n      B) errore di connessione -> messaggio con invito a riprovare;\n      C) filtro senza risultati -> avviso "Nessun risultato per i criteri selezionati".
+    * Errori: il sistema mostra messaggio d'errore e registra l'evento nei log.
+    * Regole/Vincoli: elenco ordinato per data; filtri obbligatori per stato (proposta, confermata, cancellata).
+  end note
+
+  usecase "UC3 – Iscriversi a visita proposta" as UC3
+  note right of UC3
+    * Scopo/Valore: inviare richiesta di iscrizione a una visita proposta per sé e accompagnatori.
+    * Precondizioni: fruitore autenticato; visita in stato "proposta"; capienza disponibile.
+    * Postcondizioni: iscrizione registrata con codice di prenotazione in attesa di conferma.
+    * Trigger: comando "Iscriviti" sulla visita proposta.
+    * Flusso principale: \n      1) seleziona la visita -> 2) il sistema richiede numero persone ->\n      3) inserisce quantità e conferma -> 4) il sistema verifica massimali individuali ->\n      5) controlla totale posti già prenotati -> 6) registra iscrizione e genera codice ->\n      7) mostra conferma con codice prenotazione.
+    * Flussi alternativi: \n      A) numero non valido (min 1, max previsto) -> richiesta nuovo valore;\n      B) capienza superata -> messaggio che informa dell'impossibilità di iscriversi;\n      C) visita cancellata durante l'iscrizione -> messaggio e annullamento operazione.
+    * Errori: codice fiscale inesistente o non associato -> log e messaggio; errore generico -> log e avviso.
+    * Regole/Vincoli: l'iscrizione agisce sull'ultima revisione; numero persone per iscrizione rispettato; vietata disdetta per visite confermate o cancellate.
+  end note
+
+  usecase "UC6 – Visualizzare visite confermate assegnate" as UC6
+  note right of UC6
+    * Scopo/Valore: permettere al volontario di conoscere le visite confermate a cui è convocato come guida.
+    * Precondizioni: volontario autenticato; esistono visite confermate assegnate al volontario.
+    * Postcondizioni: elenco visite confermate assegnate visualizzato con riepilogo operativo.
+    * Trigger: richiesta "Visite confermate assegnate" nel portale volontari.
+    * Flusso principale: \n      1) seleziona la voce -> 2) il sistema mostra titolo, descrizione, punto di incontro, data/ora ed eventuale biglietto.
+    * Flussi alternativi: nessuna visita assegnata -> messaggio informativo.
+    * Regole/Vincoli: dati mostrati coerenti con informazioni viste dai fruitori.
+  end note
+
+  usecase "UC7 – Visualizzare codici prenotazione partecipanti" as UC7
+  note right of UC7
+    * Scopo/Valore: fornire al volontario i codici prenotazione e numero persone per i controlli.
+    * Precondizioni: volontario autenticato; esiste una visita confermata a lui assegnata.
+    * Postcondizioni: elenco codici mostrato nella sezione "Visite confermate" del volontario.
+    * Trigger: selezione di una visita confermata assegnata.
+    * Flusso principale: \n      1) seleziona la visita -> 2) il sistema recupera codici e numerosità associata ->\n      3) visualizza l'elenco completo per la visita.
+    * Flussi alternativi: nessun codice disponibile -> messaggio informativo.
+    * Regole/Vincoli: codici visibili solo ai volontari assegnati; nessun partecipante duplicato.
+    * Controlli: dati mostrati solo per visite in stato "confermato".
+  end note
+}
+
+Fruitore --> UC1
+Fruitore --> UC2
+Fruitore --> UC3
+
+Volontario --> UC6
+Volontario --> UC7
+
+UC2 ..> UC1 : <<include>>\nrichiede account attivo
+UC3 ..> UC2 : <<include>>\nselezione visita
+UC7 ..> UC6 : <<include>>\nvisita assegnata
+
+@enduml
