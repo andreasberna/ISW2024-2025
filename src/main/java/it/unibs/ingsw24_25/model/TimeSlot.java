@@ -3,6 +3,7 @@ package it.unibs.ingsw24_25.model;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
+import java.util.Objects;
 
 public class TimeSlot {
 
@@ -11,9 +12,9 @@ public class TimeSlot {
     private Duration duration;
 
     public TimeSlot(DayOfWeek day, LocalTime startTime, Duration duration) {
-        this.day = day;
-        this.startTime = startTime;
-        this.duration = duration;
+        this.day = Objects.requireNonNull(day);
+        this.startTime = Objects.requireNonNull(startTime);
+        this.duration = requirePositiveDuration(duration);
     }
 
 
@@ -21,19 +22,26 @@ public class TimeSlot {
         return day;
     }
     public void setDay(DayOfWeek day) {
-        this.day = day;
+        this.day = Objects.requireNonNull(day);
     }
     public LocalTime getStartTime() {
         return startTime;
     }
     public void setStartTime(LocalTime startTime) {
-        this.startTime = startTime;
+        this.startTime = Objects.requireNonNull(startTime);
     }
     public Duration getDuration() {
         return duration;
     }
     public void setDuration(Duration duration) {
-        this.duration = duration;
+        this.duration = requirePositiveDuration(duration);
     }
 
+    private Duration requirePositiveDuration(Duration duration) {
+        Objects.requireNonNull(duration, "La durata non può essere nulla");
+        if (duration.isZero() || duration.isNegative()) {
+            throw new IllegalArgumentException("La durata deve essere positiva");
+        }
+        return duration;
+    }
 }

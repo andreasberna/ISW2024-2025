@@ -1,6 +1,7 @@
 package it.unibs.ingsw24_25.model;
 
 import java.time.LocalDate;
+import java.util.Objects;
 
 public class AssignedShift {
 
@@ -9,9 +10,9 @@ public class AssignedShift {
     private TimeSlot slot;
 
     public AssignedShift(LocalDate date, String visitTypeId, TimeSlot slot) {
-        this.date = date;
-        this.visitTypeId = visitTypeId;
-        this.slot = slot;
+        this.date = Objects.requireNonNull(date);
+        this.visitTypeId = Objects.requireNonNull(visitTypeId);
+        this.slot = Objects.requireNonNull(slot);
     }
 
     public LocalDate getDate() {
