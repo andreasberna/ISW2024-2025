@@ -1,0 +1,1036 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+hide circle
+
+package "model" {
+  class Configurator {
+    - nickname: String
+    - password: String
+    + Configurator(nickname: String, password: String)
+    + getNickname(): String
+    + getPassword(): String
+    + setNickname(nickname: String)
+    + setPassword(password: String)
+  }
+
+  class Beneficiary {
+    - username: String
+    - password: String
+    - fullName: String
+    + Beneficiary(username: String, password: String, fullName: String)
+    + getUsername(): String
+    + getPassword(): String
+    + getFullName(): String
+    + setUsername(username: String)
+    + setPassword(password: String)
+    + setFullName(fullName: String)
+    + passwordMatches(candidate: String): boolean
+  }
+
+  class Volunteer {
+    - nickname: String
+    - password: String
+    - personalCredentialsDefined: boolean
+    - visitsAttending: List<VisitType>
+    - availabilities: Map<YearMonth, MonthlyAvailability>
+    - scheduledShifts: Map<YearMonth, List<AssignedShift>>
+    - active: boolean
+    + Volunteer(nickname: String, password: String)
+    + isFirstAccessPending(): boolean
+    + setPersonalCredentials(password: String)
+    + passwordMatches(candidate: String): boolean
+    + addVisit(visit: VisitType)
+    + removeVisit(visit: VisitType)
+    + getAvailabilities(): Map<YearMonth, MonthlyAvailability>
+    + findAvailability(month: YearMonth): Optional<MonthlyAvailability>
+    + registerAvailability(availability: MonthlyAvailability, today: LocalDate)
+    + getScheduledShifts(): Map<YearMonth, List<AssignedShift>>
+    + getShiftsForMonth(month: YearMonth): List<AssignedShift>
+    + assignShifts(month: YearMonth, shifts: List<AssignedShift>)
+    + deactivate()
+    + activate()
+  }
+
+  class Place {
+    - placeTitle: String
+    - placeDescription: String
+    - location: String
+    - visits: List<VisitType>
+    + Place(placeTitle: String, placeDescription: String, location: String)
+    + getPlaceTitle(): String
+    + getPlaceDescription(): String
+    + getLocation(): String
+    + getVisits(): List<VisitType>
+    + setVisits(visits: List<VisitType>)
+    + addVisit(visit: VisitType)
+    + removeVisit(visit: VisitType)
+  }
+
+  class TimeSlot {
+    - day: DayOfWeek
+    - startTime: LocalTime
+    - duration: Duration
+    + TimeSlot(day: DayOfWeek, startTime: LocalTime, duration: Duration)
+    + getDay(): DayOfWeek
+    + getStartTime(): LocalTime
+    + getDuration(): Duration
+    + setDay(day: DayOfWeek)
+    + setStartTime(startTime: LocalTime)
+    + setDuration(duration: Duration)
+  }
+
+  class VisitType {
+    - id: String
+    - visitTitle: String
+    - visitDescription: String
+    - visitMeetLocation: String
+    - validFrom: LocalDate
+    - validTo: LocalDate
+    - schedules: List<TimeSlot>
+    - ticketRequired: Boolean
+    - minParticipants: int
+    - maxParticipants: int
+    - place: Place
+    - guides: List<Volunteer>
+    - state: VisitState
+    - visitDate: LocalDate
+    - enrollmentDeadline: LocalDate
+    - enrolled: int
+    + VisitType(id: String, visitTitle: String, visitDescription: String, visitMeetLocation: String,
+                validFrom: LocalDate, validTo: LocalDate, schedules: List<TimeSlot>,
+                ticketRequired: Boolean, minParticipants: int, maxParticipants: int,
+                place: Place, guides: List<Volunteer>)
+    + addSchedule(timeSlot: TimeSlot)
+    + removeSchedule(timeSlot: TimeSlot)
+    + addGuide(volunteer: Volunteer)
+    + removeGuide(volunteer: Volunteer)
+    + addEnrollment(n: int)
+    + removeEnrollment(n: int)
+    + updateState(today: LocalDate)
+    + generateOccurrences(month: YearMonth): List<PlannedVisit>
+    + isValidOn(date: LocalDate): boolean
+    + getGuides(): List<Volunteer>
+    + getSchedules(): List<TimeSlot>
+    + setVisitDate(visitDate: LocalDate)
+    + setEnrollmentDeadline(enrollmentDeadline: LocalDate)
+    + getState(): VisitState
+  }
+
+  class VisitBooking {
+    - code: String
+    - beneficiaryUsername: String
+    - beneficiaryName: String
+    - participants: int
+    - notes: String
+    + VisitBooking(code: String, beneficiaryUsername: String, beneficiaryName: String,
+                   participants: int, notes: String)
+    + getCode(): String
+    + getBeneficiaryUsername(): String
+    + getBeneficiaryName(): String
+    + getParticipants(): int
+    + getNotes(): String
+  }
+
+  class PlannedVisit {
+    - id: String
+    - date: LocalDate
+    - timeSlot: TimeSlot
+    - visitTypeId: String
+    - assignedVolunteerIds: List<String>
+    - proposable: boolean
+    - status: VisitStatus
+    - bookings: List<VisitBooking>
+    + PlannedVisit(id: String, date: LocalDate, timeSlot: TimeSlot, visitTypeId: String,
+                   proposable: boolean, assignedVolunteerIds: List<String>,
+                   status: VisitStatus, bookings: List<VisitBooking>)
+    + assignVolunteer(volunteerId: String)
+    + unassignVolunteer(volunteerId: String): boolean
+    + clearAssignements()
+    + getStatus(): VisitStatus
+    + setStatus(status: VisitStatus)
+    + getBookings(): List<VisitBooking>
+    + addBooking(booking: VisitBooking)
+    + removeBookingByCode(bookingCode: String): boolean
+    + getBookedParticipants(): int
+    + findBookingByCode(code: String): VisitBooking
+  }
+
+  class AssignedShift {
+    - date: LocalDate
+    - visitTypeId: String
+    - slot: TimeSlot
+    + AssignedShift(date: LocalDate, visitTypeId: String, slot: TimeSlot)
+    + getDate(): LocalDate
+    + getVisitTypeId(): String
+    + getSlot(): TimeSlot
+  }
+
+  class MonthlyAvailability {
+    - referenceMonth: YearMonth
+    - preferredDays: EnumSet<DayOfWeek>
+    - weeklyFrequency: int
+    - submittedOn: LocalDate
+    - snapshot: boolean
+    - snapshotCapturedOn: LocalDate
+    + MonthlyAvailability(referenceMonth: YearMonth, preferredDays: Set<DayOfWeek>,
+                          weeklyFrequency: int, submittedOn: LocalDate,
+                          snapshot: boolean, snapshotCapturedOn: LocalDate)
+    + createSnapshot(capturedOn: LocalDate): MonthlyAvailability
+    + resolveAvailableDates(): List<LocalDate>
+    + validateWindow(today: LocalDate)
+    + ensureConsistency()
+    + getPreferredDays(): EnumSet<DayOfWeek>
+    + getWeeklyFrequency(): int
+    + getReferenceMonth(): YearMonth
+    + getSubmittedOn(): LocalDate
+    + isSnapshot(): boolean
+    + getSnapshotCapturedOn(): LocalDate
+  }
+
+  class MonthlyVisitPlan {
+    - targetMonth: YearMonth
+    - phase: PlanningPhase
+    - availabilityWindowClosedOn: LocalDate
+    - plannedVisits: List<PlannedVisit>
+    - availabilitySnapshots: Map<String, MonthlyAvailability>
+    + MonthlyVisitPlan(targetMonth: YearMonth)
+    + MonthlyVisitPlan(targetMonth: YearMonth, phase: PlanningPhase,
+                       availabilityWindowClosedOn: LocalDate,
+                       plannedVisits: List<PlannedVisit>,
+                       availabilitySnapshot: Map<String, MonthlyAvailability>)
+    + getTargetMonth(): YearMonth
+    + setPhase(phase: PlanningPhase)
+    + setAvailabilityWindowClosedOn(date: LocalDate)
+    + getPlannedVisits(): List<PlannedVisit>
+    + setPlannedVisits(plannedVisits: List<PlannedVisit>)
+    + getAvailabilitySnapshots(): Map<String, MonthlyAvailability>
+    + setAvailabilitySnapshots(snapshots: Map<String, MonthlyAvailability>)
+    + recordAvailabilitySnapshot(volunteerId: String, availability: MonthlyAvailability)
+    + removeAvailabilitySnapshot(volunteerId: String)
+    + addPlannedVisit(plannedVisit: PlannedVisit)
+    + removePlannedVisit(plannedVisit: PlannedVisit)
+    + replacePlannedVisits(newPlannedVisits: List<PlannedVisit>)
+    + removeVisitsByVisitType(visitTypeId: String): boolean
+    + removeVisitsByVisitTypes(visitTypeIds: Iterable<String>): boolean
+    + removeVolunteerAssignments(volunteerId: String): boolean
+    + findVisitById(visitId: String): Optional<PlannedVisit>
+  }
+
+  class SystemSettings {
+    - territorialScope: String
+    - MaxPeoplePerSubscription: int
+    - excludedDates: List<LocalDate>
+    - activePlanningMonth: YearMonth
+    - planningPhase: PlanningPhase
+    - lastAvailabilityWindowClosure: LocalDate
+    + SystemSettings(territorialScope: String, maxPeoplePerSubscription: int,
+                     excludedDates: List<LocalDate>, activePlanningMonth: YearMonth,
+                     planningPhase: PlanningPhase, lastAvailabilityWindowClosure: LocalDate)
+    + getTerritorialScope(): String
+    + setTerritorialScope(territorialScope: String)
+    + getMaxPeoplePerSubscription(): int
+    + setMaxPeoplePerSubscription(max: int)
+    + getExcludedDates(): List<LocalDate>
+    + setExcludedDates(excludedDates: List<LocalDate>)
+    + getActivePlanningMonth(): YearMonth
+    + setActivePlanningMonth(month: YearMonth)
+    + getPlanningPhase(): PlanningPhase
+    + setPlanningPhase(planningPhase: PlanningPhase)
+    + getLastAvailabilityWindowClosure(): LocalDate
+    + setLastAvailabilityWindowClosure(date: LocalDate)
+  }
+
+  enum VisitState {
+    PROPOSTA
+    COMPLETA
+    CONFERMATA
+    CANCELLATA
+    EFFETTUATA
+  }
+
+  enum VisitStatus {
+    PROPOSED
+    CONFIRMED
+    CANCELLED
+  }
+
+  enum PlanningPhase {
+    AVAILABILITY_COLLECTION_OPEN
+    AVAILABILITY_COLLECTION_CLOSED
+    CATALOG_MANAGEMENT
+    PLAN_GENERATED
+    ASSIGNMENT
+    REVIEW
+    READY_FOR_NEXT_CYCLE
+  }
+}
+
+package "DTO" {
+  class PlaceDTO {
+    - title: String
+    - description: String
+    - location: String
+    + PlaceDTO(title: String, description: String, location: String)
+    + getTitle(): String
+    + getDescription(): String
+    + getLocation(): String
+  }
+
+  class VisitTypeDTO {
+    - id: String
+    - title: String
+    - daySummary: String
+    - startTime: String
+    - endTime: String
+    - durationMinutes: int
+    - ticketRequired: boolean
+    - minParticipants: int
+    - maxParticipants: int
+    - placeID: String
+    - state: VisitState
+    + VisitTypeDTO(id: String, title: String, daySummary: String,
+                   startTime: String, endTime: String, durationMinutes: int,
+                   ticketRequired: boolean, minParticipants: int, maxParticipants: int,
+                   placeID: String, state: VisitState)
+    + getId(): String
+    + getTitle(): String
+    + getDaySummary(): String
+    + getStartTime(): String
+    + getendTime(): String
+    + getDurationMinutes(): int
+    + isTicketRequired(): boolean
+    + getMinParticipants(): int
+    + getMaxParticipants(): int
+    + getPlaceID(): String
+    + getState(): VisitState
+  }
+
+  class VolunteerAvailabilityDTO {
+    - referenceMonth: YearMonth
+    - preferredDays: List<DayOfWeek>
+    - weeklyFrequency: int
+    - submittedOn: LocalDate
+    + VolunteerAvailabilityDTO(referenceMonth: YearMonth, preferredDays: List<DayOfWeek>,
+                               weeklyFrequency: int, submittedOn: LocalDate)
+    + getReferenceMonth(): YearMonth
+    + getPreferredDays(): List<DayOfWeek>
+    + getWeeklyFrequency(): int
+    + getSubmittedOn(): LocalDate
+  }
+
+  class AssignedShiftDTO {
+    - month: YearMonth
+    - date: LocalDate
+    - visitTypeId: String
+    - slot: TimeSlot
+    + AssignedShiftDTO(month: YearMonth, date: LocalDate, visitTypeId: String, slot: TimeSlot)
+    + getMonth(): YearMonth
+    + getDate(): LocalDate
+    + getVisitTypeId(): String
+    + getSlot(): TimeSlot
+  }
+
+  class VolunteerDTO {
+    - nickname: String
+    - password: String
+    - firstAccessPending: boolean
+    - visitTypeTitles: List<String>
+    - availabilities: List<VolunteerAvailabilityDTO>
+    - scheduledShifts: List<AssignedShiftDTO>
+    + VolunteerDTO(nickname: String, password: String, firstAccessPending: boolean,
+                   visitTypeTitles: List<String>, availabilities: List<VolunteerAvailabilityDTO>,
+                   scheduledShifts: List<AssignedShiftDTO>)
+    + getNickname(): String
+    + getPassword(): String
+    + isFirstAccessPending(): boolean
+    + getVisitTypeTitles(): List<String>
+    + getAvailabilities(): List<VolunteerAvailabilityDTO>
+    + getScheduledShifts(): List<AssignedShiftDTO>
+  }
+
+  class PlanAvailabilityDTO {
+    - volunteerNickname: String
+    - referenceMonth: YearMonth
+    - preferredDays: List<DayOfWeek>
+    - weeklyFrequency: int
+    - submittedOn: LocalDate
+    - snapshotCapturedOn: LocalDate
+    + PlanAvailabilityDTO(volunteerNickname: String, referenceMonth: YearMonth,
+                          preferredDays: List<DayOfWeek>, weeklyFrequency: int,
+                          submittedOn: LocalDate, snapshotCapturedOn: LocalDate)
+    + getVolunteerNickname(): String
+    + getReferenceMonth(): YearMonth
+    + getPreferredDays(): List<DayOfWeek>
+    + getWeeklyFrequency(): int
+    + getSubmittedOn(): LocalDate
+    + getSnapshotCapturedOn(): LocalDate
+  }
+
+  class PlannedVisitDTO {
+    - month: YearMonth
+    - date: LocalDate
+    - dayOfWeek: DayOfWeek
+    - startTime: LocalTime
+    - durationMinutes: long
+    - visitTypeId: String
+    - visitTitle: String
+    - proposable: boolean
+    - assignedVolunteers: List<String>
+    + PlannedVisitDTO(month: YearMonth, date: LocalDate, dayOfWeek: DayOfWeek,
+                      startTime: LocalTime, durationMinutes: long, visitTypeId: String,
+                      visitTitle: String, proposable: boolean, assignedVolunteers: List<String>)
+    + getMonth(): YearMonth
+    + getDate(): LocalDate
+    + getDayOfWeek(): DayOfWeek
+    + getStartTime(): LocalTime
+    + getDurationMinutes(): long
+    + getVisitTypeId(): String
+    + getVisitTitle(): String
+    + isProposable(): boolean
+    + getAssignedVolunteers(): List<String>
+  }
+
+  class MonthlyPlanDTO {
+    - targetMonth: YearMonth
+    - phase: PlanningPhase
+    - availabilityWindowClosedOn: LocalDate
+    - plannedVisits: List<PlannedVisitDTO>
+    - availabilitySnapshots: List<PlanAvailabilityDTO>
+    + MonthlyPlanDTO(targetMonth: YearMonth, phase: PlanningPhase,
+                     availabilityWindowClosedOn: LocalDate, plannedVisits: List<PlannedVisitDTO>,
+                     availabilitySnapshots: List<PlanAvailabilityDTO>)
+    + getTargetMonth(): YearMonth
+    + getPhase(): PlanningPhase
+    + getAvailabilityWindowClosedOn(): LocalDate
+    + getPlannedVisits(): List<PlannedVisitDTO>
+    + getAvailabilitySnapshots(): List<PlanAvailabilityDTO>
+  }
+
+  class VisitBookingDTO {
+    - code: String
+    - beneficiaryName: String
+    - participants: int
+    - notes: String
+    - visitDate: LocalDate
+    - visitTitle: String
+    - status: VisitStatus
+    + VisitBookingDTO(code: String, beneficiaryName: String, participants: int,
+                      notes: String, visitDate: LocalDate, visitTitle: String, status: VisitStatus)
+    + getCode(): String
+    + getBeneficiaryName(): String
+    + getParticipants(): int
+    + getNotes(): String
+    + getVisitDate(): LocalDate
+    + getVisitTitle(): String
+    + getStatus(): VisitStatus
+  }
+
+  class VisitOccurrenceDTO {
+    - id: String
+    - month: YearMonth
+    - date: LocalDate
+    - startTime: LocalTime
+    - title: String
+    - description: String
+    - meetingPoint: String
+    - ticketRequired: boolean
+    - minParticipants: int
+    - maxParticipants: int
+    - bookedParticipants: int
+    - status: VisitStatus
+    - visitTypeId: String
+    - bookings: List<VisitBookingDTO>
+    + VisitOccurrenceDTO(id: String, month: YearMonth, date: LocalDate, startTime: LocalTime,
+                         title: String, description: String, meetingPoint: String,
+                         ticketRequired: boolean, minParticipants: int, maxParticipants: int,
+                         bookedParticipants: int, status: VisitStatus, visitTypeId: String,
+                         bookings: List<VisitBookingDTO>)
+    + getId(): String
+    + getMonth(): YearMonth
+    + getDate(): LocalDate
+    + getStartTime(): LocalTime
+    + getTitle(): String
+    + getDescription(): String
+    + getMeetingPoint(): String
+    + isTicketRequired(): boolean
+    + getMinParticipants(): int
+    + getMaxParticipants(): int
+    + getBookedParticipants(): int
+    + getStatus(): VisitStatus
+    + getVisitTypeId(): String
+    + getBookings(): List<VisitBookingDTO>
+  }
+}
+
+package "repository" {
+  interface VolunteerRepository {
+    + findByNickname(nickname: String): Optional<Volunteer>
+    + findAll(): List<Volunteer>
+    + save(volunteer: Volunteer)
+    + deleteByNickname(nickname: String)
+    + exist(): boolean
+  }
+
+  class JSONVolunteerRepository {
+    - file: Path
+    - cache: Map<String, Volunteer>
+    - planRepository: MonthlyVisitPlanRepository
+    + JSONVolunteerRepository(file: Path)
+    + JSONVolunteerRepository(file: Path, planRepository: MonthlyVisitPlanRepository)
+    + findByNickname(nickname: String): Optional<Volunteer>
+    + findAll(): List<Volunteer>
+    + save(volunteer: Volunteer)
+    + deleteByNickname(nickname: String)
+    + exist(): boolean
+  }
+
+  interface PlaceRepository {
+    + findById(id: String): Optional<Place>
+    + findAll(): List<Place>
+    + save(place: Place)
+    + deleteById(id: String)
+  }
+
+  class JSONPlaceRepository {
+    - file: Path
+    - cache: Map<String, Place>
+    + JSONPlaceRepository(file: Path)
+    + findById(id: String): Optional<Place>
+    + findAll(): List<Place>
+    + save(place: Place)
+    + deleteById(id: String)
+  }
+
+  interface VisitTypeRepository {
+    + findById(id: String): Optional<VisitType>
+    + findByPlace(placeId: String): List<VisitType>
+    + findAll(): List<VisitType>
+    + save(visitType: VisitType)
+    + deleteById(id: String)
+  }
+
+  class JSONVisitTypeRepository {
+    - file: Path
+    - cache: Map<String, VisitType>
+    + JSONVisitTypeRepository(file: Path)
+    + findById(id: String): Optional<VisitType>
+    + findByPlace(placeId: String): List<VisitType>
+    + findAll(): List<VisitType>
+    + save(visitType: VisitType)
+    + deleteById(id: String)
+  }
+
+  interface ConfiguratorRepository {
+    + save(configurator: Configurator)
+    + load(): Optional<Map<String, Configurator>>
+    + deleteByNickname(nickname: String)
+  }
+
+  class JSONConfiguratorRepository {
+    - file: Path
+    - cache: Map<String, Configurator>
+    + JSONConfiguratorRepository(file: Path)
+    + save(configurator: Configurator)
+    + load(): Optional<Map<String, Configurator>>
+    + deleteByNickname(nickname: String)
+  }
+
+  interface SettingsRepository {
+    + save(settings: SystemSettings)
+    + load(): Optional<SystemSettings>
+  }
+
+  class JSONSettingsRepository {
+    - file: Path
+    - cache: SystemSettings
+    + JSONSettingsRepository(file: Path)
+    + save(settings: SystemSettings)
+    + load(): Optional<SystemSettings>
+  }
+
+  interface MonthlyVisitPlanRepository {
+    + save(plan: MonthlyVisitPlan)
+    + findByMonth(month: YearMonth): Optional<MonthlyVisitPlan>
+    + findAll(): List<MonthlyVisitPlan>
+    + deleteByMonth(month: YearMonth)
+    + removeVisitsByVisitType(visitTypeId: String)
+    + removeVolunteerAssignments(nickname: String)
+  }
+
+  class JSONMonthlyVisitPlanRepository {
+    - file: Path
+    - cache: Map<String, MonthlyVisitPlan>
+    + JSONMonthlyVisitPlanRepository(file: Path)
+    + save(plan: MonthlyVisitPlan)
+    + findByMonth(month: YearMonth): Optional<MonthlyVisitPlan>
+    + findAll(): List<MonthlyVisitPlan>
+    + deleteByMonth(month: YearMonth)
+    + removeVisitsByVisitType(visitTypeId: String)
+    + removeVolunteerAssignments(nickname: String)
+  }
+
+  interface BeneficiaryRepository {
+    + findByUsername(username: String): Optional<Beneficiary>
+    + save(beneficiary: Beneficiary)
+    + findAll(): List<Beneficiary>
+  }
+
+  class JSONBeneficiaryRepository {
+    - file: Path
+    - cache: Map<String, Beneficiary>
+    + JSONBeneficiaryRepository(file: Path)
+    + findByUsername(username: String): Optional<Beneficiary>
+    + save(beneficiary: Beneficiary)
+    + findAll(): List<Beneficiary>
+  }
+
+  class ProvisionedCredentialStore {
+    - configurators: Map<String, String>
+    - volunteers: Map<String, String>
+    + ProvisionedCredentialStore()
+    + getConfigurators(): Map<String, String>
+    + getVolunteers(): Map<String, String>
+  }
+
+  interface ProvisionedCredentialsRepository {
+    + findConfiguratorPassword(nickname: String): Optional<String>
+    + findVolunteerPassword(nickname: String): Optional<String>
+    + registerConfiguratorCredential(nickname: String, password: String)
+    + registerVolunteerCredential(nickname: String, password: String)
+    + consumeConfiguratorCredential(nickname: String)
+    + consumeVolunteerCredential(nickname: String)
+    + hasConfiguratorCredential(nickname: String): boolean
+    + hasVolunteerCredential(nickname: String): boolean
+    + hasAnyConfiguratorCredential(): boolean
+  }
+
+  class JSONProvisionedCredentialsRepository {
+    - file: Path
+    - store: ProvisionedCredentialStore
+    + JSONProvisionedCredentialsRepository(file: Path)
+    + findConfiguratorPassword(nickname: String): Optional<String>
+    + findVolunteerPassword(nickname: String): Optional<String>
+    + registerConfiguratorCredential(nickname: String, password: String)
+    + registerVolunteerCredential(nickname: String, password: String)
+    + consumeConfiguratorCredential(nickname: String)
+    + consumeVolunteerCredential(nickname: String)
+    + hasConfiguratorCredential(nickname: String): boolean
+    + hasVolunteerCredential(nickname: String): boolean
+    + hasAnyConfiguratorCredential(): boolean
+  }
+}
+
+package "service" {
+  interface LoginService {
+    + isFirstAccessPending(nickname: String): boolean
+    + verifyDefaultCredentials(nickname: String, password: String)
+    + setPersonalCredentials(currentNickname: String, newNickname: String, password: String)
+    + verifyLogin(nickname: String, password: String): boolean
+  }
+
+  interface VolunteerService {
+    + submitAvailability(nickname: String, availability: MonthlyAvailability, date: LocalDate)
+    + loadAvailability(nickname: String, month: YearMonth): Optional<MonthlyAvailability>
+    + loadSchedule(nickname: String, month: YearMonth): List<AssignedShift>
+    + assignShifts(nickname: String, month: YearMonth, shifts: List<AssignedShift>)
+    + snapshotAvailabilities(month: YearMonth, capturedOn: LocalDate): Map<String, MonthlyAvailability>
+    + removeVolunteerAccount(nickname: String)
+    + loadConfirmedGuidedVisits(nickname: String, month: YearMonth): List<VisitOccurrenceDTO>
+  }
+
+  class VolunteerServiceImp {
+    - volunteerRepository: VolunteerRepository
+    - settingsRepository: SettingsRepository
+    - monthlyVisitPlanRepository: MonthlyVisitPlanRepository
+    - visitTypeRepository: VisitTypeRepository
+    - provisionedCredentialsRepository: ProvisionedCredentialsRepository
+    - defaultCredentialsValidated: Set<String>
+    + VolunteerServiceImp(volunteerRepository: VolunteerRepository,
+                          settingsRepository: SettingsRepository,
+                          monthlyVisitPlanRepository: MonthlyVisitPlanRepository,
+                          visitTypeRepository: VisitTypeRepository,
+                          provisionedCredentialsRepository: ProvisionedCredentialsRepository)
+    + submitAvailability(nickname: String, availability: MonthlyAvailability, today: LocalDate)
+    + loadAvailability(nickname: String, month: YearMonth): Optional<MonthlyAvailability>
+    + loadSchedule(nickname: String, month: YearMonth): List<AssignedShift>
+    + assignShifts(nickname: String, month: YearMonth, shifts: List<AssignedShift>)
+    + snapshotAvailabilities(month: YearMonth, capturedOn: LocalDate): Map<String, MonthlyAvailability>
+    + removeVolunteerAccount(nickname: String)
+    + loadConfirmedGuidedVisits(nickname: String, month: YearMonth): List<VisitOccurrenceDTO>
+    + isFirstAccessPending(nickname: String): boolean
+    + verifyDefaultCredentials(nickname: String, password: String)
+    + setPersonalCredentials(currentNickname: String, newNickname: String, password: String)
+    + verifyLogin(nickname: String, password: String): boolean
+  }
+
+  interface ConfiguratorService {
+    + setTerritorialScope(scope: String)
+    + setMaxPeoplePerSubscription(max: int)
+    + addPlace(name: String, description: String, location: String): String
+    + addVisitType(placeID: String, title: String, description: String, meetLocation: String,
+                   schedules: List<TimeSlot>, ticketRequired: boolean, minParticipants: int,
+                   maxParticipants: int, validFrom: LocalDate, validTo: LocalDate): String
+    + addVolunteer(nickname: String, defaultPassword: String)
+    + linkVOlunteerToVisit(nickname: String, visitTypeId: String)
+    + listPlace(): List<PlaceDTO>
+    + listVisitTypeByPlace(placeId: String): List<VisitTypeDTO>
+    + listVisitType(): List<VisitTypeDTO>
+    + listVolunteerWVisitType(): List<VolunteerDTO>
+    + setBlackoutDates(excludedDates: List<LocalDate>)
+    + closeAvailabilityWindow(today: LocalDate)
+    + applyCatalogChange(change: Runnable)
+    + generateMonthlyPlan(targetMonth: YearMonth): MonthlyPlanDTO
+    + getMonthlyPlanDetails(month: YearMonth): MonthlyPlanDTO
+    + assignVolunteerToPlannedVisit(month: YearMonth, date: LocalDate, slot: TimeSlot,
+                                    visitTypeId: String, volunteerNickname: String)
+    + removePlannedVisit(month: YearMonth, date: LocalDate, slot: TimeSlot, visitTypeId: String)
+    + removePlace(placeID: String)
+    + removeVisitType(visitTypeId: String)
+    + removeVolunteer(nickname: String)
+    + reopenAvailabilityWindow(today: LocalDate)
+    + registerConfigurator(nickname: String, password: String)
+    + listConfigurators(): List<String>
+    + hasPendingConfiguratorSeeds(): boolean
+  }
+
+  class ConfiguratorServiceImp {
+    - placeRepository: PlaceRepository
+    - visitTypeRepository: VisitTypeRepository
+    - volunteerRepository: VolunteerRepository
+    - settingsRepository: SettingsRepository
+    - monthlyVisitPlanRepository: MonthlyVisitPlanRepository
+    - configuratorRepository: ConfiguratorRepository
+    - provisionedCredentialsRepository: ProvisionedCredentialsRepository
+    - volunteerService: VolunteerService
+    - defaultCredentialsValidated: Set<String>
+    + ConfiguratorServiceImp(placeRepository: PlaceRepository,
+                             visitTypeRepository: VisitTypeRepository,
+                             volunteerRepository: VolunteerRepository,
+                             settingsRepository: SettingsRepository,
+                             monthlyVisitPlanRepository: MonthlyVisitPlanRepository,
+                             configuratorRepository: ConfiguratorRepository,
+                             provisionedCredentialsRepository: ProvisionedCredentialsRepository,
+                             volunteerService: VolunteerService)
+    + setTerritorialScope(scope: String)
+    + setMaxPeoplePerSubscription(max: int)
+    + addPlace(name: String, description: String, location: String): String
+    + addVisitType(placeID: String, title: String, description: String, meetLocation: String,
+                   schedules: List<TimeSlot>, ticketRequired: boolean, minParticipants: int,
+                   maxParticipants: int, validFrom: LocalDate, validTo: LocalDate): String
+    + addVolunteer(nickname: String, defaultPassword: String)
+    + linkVOlunteerToVisit(nickname: String, visitTypeId: String)
+    + listPlace(): List<PlaceDTO>
+    + listVisitTypeByPlace(placeId: String): List<VisitTypeDTO>
+    + listVisitType(): List<VisitTypeDTO>
+    + listVolunteerWVisitType(): List<VolunteerDTO>
+    + setBlackoutDates(excludedDates: List<LocalDate>)
+    + closeAvailabilityWindow(today: LocalDate)
+    + applyCatalogChange(change: Runnable)
+    + generateMonthlyPlan(targetMonth: YearMonth): MonthlyPlanDTO
+    + getMonthlyPlanDetails(month: YearMonth): MonthlyPlanDTO
+    + assignVolunteerToPlannedVisit(month: YearMonth, date: LocalDate, slot: TimeSlot,
+                                    visitTypeId: String, volunteerNickname: String)
+    + removePlannedVisit(month: YearMonth, date: LocalDate, slot: TimeSlot, visitTypeId: String)
+    + removePlace(placeID: String)
+    + removeVisitType(visitTypeId: String)
+    + removeVolunteer(nickname: String)
+    + reopenAvailabilityWindow(today: LocalDate)
+    + registerConfigurator(nickname: String, password: String)
+    + listConfigurators(): List<String>
+    + hasPendingConfiguratorSeeds(): boolean
+    + isFirstAccessPending(nickname: String): boolean
+    + verifyDefaultCredentials(nickname: String, password: String)
+    + setPersonalCredentials(currentNickname: String, newNickname: String, password: String)
+    + verifyLogin(nickname: String, password: String): boolean
+  }
+
+  interface BeneficiaryService {
+    + register(fullName: String, username: String, password: String)
+    + listVisitsByStatus(statuses: VisitStatus[]): List<VisitOccurrenceDTO>
+    + bookVisit(username: String, visitId: String, participants: int, notes: String, today: LocalDate): String
+    + listBookings(username: String): List<VisitBookingDTO>
+    + cancelBooking(username: String, bookingCode: String, today: LocalDate)
+  }
+
+  class BeneficiaryServiceImp {
+    - beneficiaryRepository: BeneficiaryRepository
+    - volunteerRepository: VolunteerRepository
+    - monthlyVisitPlanRepository: MonthlyVisitPlanRepository
+    - visitTypeRepository: VisitTypeRepository
+    - settingsRepository: SettingsRepository
+    + BeneficiaryServiceImp(beneficiaryRepository: BeneficiaryRepository,
+                             volunteerRepository: VolunteerRepository,
+                             monthlyVisitPlanRepository: MonthlyVisitPlanRepository,
+                             visitTypeRepository: VisitTypeRepository,
+                             settingsRepository: SettingsRepository)
+    + register(fullName: String, username: String, password: String)
+    + listVisitsByStatus(statuses: VisitStatus[]): List<VisitOccurrenceDTO>
+    + bookVisit(username: String, visitId: String, participants: int, notes: String, today: LocalDate): String
+    + listBookings(username: String): List<VisitBookingDTO>
+    + cancelBooking(username: String, bookingCode: String, today: LocalDate)
+    + isFirstAccessPending(nickname: String): boolean
+    + verifyDefaultCredentials(nickname: String, password: String)
+    + setPersonalCredentials(currentNickname: String, newNickname: String, password: String)
+    + verifyLogin(username: String, password: String): boolean
+  }
+}
+
+package "util" {
+  class DTOMapper {
+    + placeToDTO(place: Place): PlaceDTO
+    + visitTypeToDTO(visitType: VisitType): VisitTypeDTO
+    + volunteerToDTO(volunteer: Volunteer): VolunteerDTO
+    + planToDTO(plan: MonthlyVisitPlan, visitTypes: List<VisitType>): MonthlyPlanDTO
+    + toVisitOccurrenceDTO(plan: MonthlyVisitPlan, visit: PlannedVisit,
+                           visitType: VisitType, includeBookings: boolean): VisitOccurrenceDTO
+  }
+
+  class JSONSupport {
+    + serializeConfigurator(map: Map<String, Configurator>): String
+    + deserializeConfigurator(json: String): Map<String, Configurator>
+    + serializeVolunteerMap(map: Map<String, Volunteer>): String
+    + deserializeVolunteerMap(json: String): Map<String, Volunteer>
+    + serializePlaceMap(map: Map<String, Place>): String
+    + deserializePlaceMap(json: String): Map<String, Place>
+    + serializeVisitTypeMap(map: Map<String, VisitType>): String
+    + deserializeVisitTypeMap(json: String): Map<String, VisitType>
+    + serializeMonthlyVisitPlanMap(map: Map<String, MonthlyVisitPlan>): String
+    + deserializeMonthlyVisitPlanMap(json: String): Map<String, MonthlyVisitPlan>
+    + serializeBeneficiaryMap(map: Map<String, Beneficiary>): String
+    + deserializeBeneficiaryMap(json: String): Map<String, Beneficiary>
+    + serializeSystemSettings(settings: SystemSettings): String
+    + deserializeSystemSettings(json: String): SystemSettings
+    + serializeProvisionedCredentials(store: ProvisionedCredentialStore): String
+    + deserializeProvisionedCredentials(json: String): ProvisionedCredentialStore
+  }
+
+  class AvailabilitySubmissionPolicy {
+    + isWindowOpen(referenceMonth: YearMonth, today: LocalDate): boolean
+    + nextSubmissionMonth(today: LocalDate): YearMonth
+  }
+
+  class ExcludedDatePolicy {
+    + allowedMonth(referenceDate: LocalDate): YearMonth
+  }
+
+  class PlanningWindowPolicy {
+    + resolveNextPlanningMonth(today: LocalDate): YearMonth
+  }
+}
+
+package "cli" {
+  class PromptReader {
+    - scanner: Scanner
+    + PromptReader(scanner: Scanner)
+    + readLine(prompt: String): String
+    + readInt(prompt: String): int
+    + readLocalDate(prompt: String): LocalDate
+    + readYesNo(prompt: String): boolean
+  }
+
+  class Printer {
+    + println(message: String)
+    + print(message: String)
+    + printSeparator()
+  }
+
+  class VolunteerCliSupport {
+    - volunteerService: VolunteerService
+    - printer: Printer
+    - promptReader: PromptReader
+    + VolunteerCliSupport(volunteerService: VolunteerService, printer: Printer, promptReader: PromptReader)
+    + run()
+    + handleAvailability()
+    + handleSchedule()
+    + handleGuidedVisits()
+  }
+
+  class BeneficiaryCommandHandler {
+    - beneficiaryService: BeneficiaryService
+    - printer: Printer
+    - promptReader: PromptReader
+    + BeneficiaryCommandHandler(beneficiaryService: BeneficiaryService, printer: Printer, promptReader: PromptReader)
+    + run()
+    + handleRegistration()
+    + handleLogin()
+    + handleBooking()
+    + handleCancellation()
+  }
+
+  class VolunteerCommandHandler {
+    - volunteerService: VolunteerService
+    - printer: Printer
+    - promptReader: PromptReader
+    + VolunteerCommandHandler(volunteerService: VolunteerService, printer: Printer, promptReader: PromptReader)
+    + run()
+    + handleFirstAccess()
+    + handleLogin()
+  }
+
+  class ConfiguratorCommandHandler {
+    - configuratorService: ConfiguratorService
+    - volunteerService: VolunteerService
+    - printer: Printer
+    - promptReader: PromptReader
+    + ConfiguratorCommandHandler(configuratorService: ConfiguratorService, volunteerService: VolunteerService,
+                                 printer: Printer, promptReader: PromptReader)
+    + run()
+    + handleFirstAccess()
+    + handleLogin()
+    + handleCatalogManagement()
+    + handlePlanning()
+  }
+
+  class FirstAccessSetup {
+    - configuratorService: ConfiguratorService
+    - volunteerService: VolunteerService
+    - printer: Printer
+    - promptReader: PromptReader
+    + FirstAccessSetup(configuratorService: ConfiguratorService, volunteerService: VolunteerService,
+                       printer: Printer, promptReader: PromptReader)
+    + run()
+  }
+
+  class CommandRouter {
+    - beneficiaryHandler: BeneficiaryCommandHandler
+    - volunteerHandler: VolunteerCommandHandler
+    - configuratorHandler: ConfiguratorCommandHandler
+    - printer: Printer
+    - promptReader: PromptReader
+    + CommandRouter(beneficiaryHandler: BeneficiaryCommandHandler,
+                    volunteerHandler: VolunteerCommandHandler,
+                    configuratorHandler: ConfiguratorCommandHandler,
+                    printer: Printer, promptReader: PromptReader)
+    + route()
+  }
+
+  class CliApp {
+    - commandRouter: CommandRouter
+    + CliApp(commandRouter: CommandRouter)
+    + run()
+  }
+
+  class Main {
+    + main(args: String[])
+  }
+}
+
+
+
+Volunteer "1" o-- "*" VisitType
+Volunteer "1" o-- "*" MonthlyAvailability
+Volunteer "1" o-- "*" AssignedShift
+VisitType "1" --> "1" Place
+VisitType "1" o-- "*" TimeSlot
+VisitType "1" o-- "*" Volunteer
+PlannedVisit "1" o-- "*" VisitBooking
+PlannedVisit "*" --> "1" TimeSlot
+PlannedVisit "*" --> "1" VisitType
+MonthlyVisitPlan "1" o-- "*" PlannedVisit
+MonthlyVisitPlan "1" o-- "*" MonthlyAvailability
+MonthlyVisitPlan "1" --> "1" PlanningPhase
+MonthlyAvailability --> AvailabilitySubmissionPolicy
+MonthlyVisitPlan --> PlanningPhase
+Place "1" o-- "*" VisitType
+
+VolunteerService <|.. VolunteerServiceImp
+ConfiguratorService <|.. ConfiguratorServiceImp
+BeneficiaryService <|.. BeneficiaryServiceImp
+LoginService <|.. VolunteerService
+LoginService <|.. ConfiguratorService
+LoginService <|.. BeneficiaryService
+
+VolunteerServiceImp --> VolunteerRepository
+VolunteerServiceImp --> SettingsRepository
+VolunteerServiceImp --> MonthlyVisitPlanRepository
+VolunteerServiceImp --> VisitTypeRepository
+VolunteerServiceImp --> ProvisionedCredentialsRepository
+VolunteerServiceImp --> Volunteer
+
+ConfiguratorServiceImp --> PlaceRepository
+ConfiguratorServiceImp --> VisitTypeRepository
+ConfiguratorServiceImp --> VolunteerRepository
+ConfiguratorServiceImp --> SettingsRepository
+ConfiguratorServiceImp --> MonthlyVisitPlanRepository
+ConfiguratorServiceImp --> ConfiguratorRepository
+ConfiguratorServiceImp --> ProvisionedCredentialsRepository
+ConfiguratorServiceImp --> VolunteerService
+ConfiguratorServiceImp --> DTOMapper
+ConfiguratorServiceImp --> MonthlyVisitPlan
+ConfiguratorServiceImp --> SystemSettings
+
+BeneficiaryServiceImp --> BeneficiaryRepository
+BeneficiaryServiceImp --> VolunteerRepository
+BeneficiaryServiceImp --> MonthlyVisitPlanRepository
+BeneficiaryServiceImp --> VisitTypeRepository
+BeneficiaryServiceImp --> SettingsRepository
+BeneficiaryServiceImp --> DTOMapper
+BeneficiaryServiceImp --> VisitBooking
+
+DTOMapper --> Place
+DTOMapper --> VisitType
+DTOMapper --> Volunteer
+DTOMapper --> MonthlyVisitPlan
+DTOMapper --> PlannedVisit
+DTOMapper --> VisitBooking
+DTOMapper --> VisitOccurrenceDTO
+
+JSONVolunteerRepository ..|> VolunteerRepository
+JSONPlaceRepository ..|> PlaceRepository
+JSONVisitTypeRepository ..|> VisitTypeRepository
+JSONConfiguratorRepository ..|> ConfiguratorRepository
+JSONSettingsRepository ..|> SettingsRepository
+JSONMonthlyVisitPlanRepository ..|> MonthlyVisitPlanRepository
+JSONBeneficiaryRepository ..|> BeneficiaryRepository
+JSONProvisionedCredentialsRepository ..|> ProvisionedCredentialsRepository
+
+VolunteerCliSupport --> VolunteerService
+VolunteerCliSupport --> Printer
+VolunteerCliSupport --> PromptReader
+
+VolunteerCommandHandler --> VolunteerService
+VolunteerCommandHandler --> Printer
+VolunteerCommandHandler --> PromptReader
+
+ConfiguratorCommandHandler --> ConfiguratorService
+ConfiguratorCommandHandler --> VolunteerService
+ConfiguratorCommandHandler --> Printer
+ConfiguratorCommandHandler --> PromptReader
+
+BeneficiaryCommandHandler --> BeneficiaryService
+BeneficiaryCommandHandler --> Printer
+BeneficiaryCommandHandler --> PromptReader
+
+FirstAccessSetup --> ConfiguratorService
+FirstAccessSetup --> VolunteerService
+FirstAccessSetup --> Printer
+FirstAccessSetup --> PromptReader
+
+CommandRouter --> BeneficiaryCommandHandler
+CommandRouter --> VolunteerCommandHandler
+CommandRouter --> ConfiguratorCommandHandler
+CommandRouter --> Printer
+CommandRouter --> PromptReader
+
+CliApp --> CommandRouter
+Main --> CliApp
+
+ProvisionedCredentialStore --> ProvisionedCredentialsRepository
+JSONSupport --> ProvisionedCredentialStore
+JSONSupport --> Configurator
+JSONSupport --> Volunteer
+JSONSupport --> Place
+JSONSupport --> VisitType
+JSONSupport --> MonthlyVisitPlan
+JSONSupport --> Beneficiary
+JSONSupport --> SystemSettings
+
+MonthlyVisitPlanRepository --> MonthlyVisitPlan
+VisitTypeRepository --> VisitType
+PlaceRepository --> Place
+VolunteerRepository --> Volunteer
+BeneficiaryRepository --> Beneficiary
+
+@enduml
