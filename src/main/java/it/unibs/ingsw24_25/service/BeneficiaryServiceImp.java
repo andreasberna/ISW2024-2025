@@ -34,8 +34,9 @@ public class BeneficiaryServiceImp implements BeneficiaryService {
     @Override
     public void register(String fullName, String username, String password) {
         String sanitizedUsername = requireNonBlank(username, "Lo username non può essere vuoto");
-        if (beneficiaryRepository.findByUsername(sanitizedUsername).isPresent() || volunteerRepository.findByNickname (sanitizedUsername).isPresent()) {
-            throw new IllegalArgumentException ("Username già utilizato");
+        if (beneficiaryRepository.findByUsername(sanitizedUsername).isPresent()
+                || volunteerRepository.findByNickname(sanitizedUsername).isPresent()) {
+            throw new IllegalArgumentException("Username già utilizzato");
         }
 
         Beneficiary beneficiary = new Beneficiary(sanitizedUsername,
@@ -54,11 +55,13 @@ public class BeneficiaryServiceImp implements BeneficiaryService {
                 .collect (Collectors.toMap (VisitType::getId, visit -> visit, (left, right) -> left));
         List<VisitOccurrenceDTO> occurrences = new ArrayList<>();
         for (MonthlyVisitPlan plan : monthlyVisitPlanRepository.findAll()) {
-            YearMonth month = plan.getTargetMonth ();
+            if (plan == null) continue;
             for (PlannedVisit visit : plan.getPlannedVisits()) {
-                if (visit != null || !wanted.contains (visit.getStatus ())) continue;
-                VisitType visitType = visitTypes.get (visit.getVisitTypeId ());
-                occurrences.add(DTOMapper.toVisitOccurrenceDTO (plan, visit, visitType, false));
+                if (visit == null || !wanted.contains(visit.getStatus())) {
+                    continue;
+                }
+                VisitType visitType = visitTypes.get(visit.getVisitTypeId());
+                occurrences.add(DTOMapper.toVisitOccurrenceDTO(plan, visit, visitType, false));
             }
         }
         occurrences.sort(Comparator.comparing(VisitOccurrenceDTO::getDate).
@@ -105,7 +108,9 @@ public class BeneficiaryServiceImp implements BeneficiaryService {
                 .orElseThrow(() -> new IllegalArgumentException("Fruitore non trovato"));
         List<VisitBookingDTO> bookings = new ArrayList<>();
         for (MonthlyVisitPlan plan : monthlyVisitPlanRepository.findAll()) {
+            if (plan == null) continue;
             for (PlannedVisit visit : plan.getPlannedVisits()) {
+                if (visit == null) continue;
                 VisitType visitType = visitTypeRepository.findById(visit.getVisitTypeId()).orElse(null);
                 for (VisitBooking booking : visit.getBookings()) {
                     if (booking.getBeneficiaryUsername().equals(sanitized)) {
@@ -200,7 +205,9 @@ public class BeneficiaryServiceImp implements BeneficiaryService {
 
     private PlannedVisitWithPlan findVisitByBooking(String bookingCode) {
         for (MonthlyVisitPlan plan : monthlyVisitPlanRepository.findAll()) {
+            if (plan == null) continue;
             for (PlannedVisit visit : plan.getPlannedVisits()) {
+                if (visit == null) continue;
                 if (visit.findBookingByCode(bookingCode) != null) {
                     return new PlannedVisitWithPlan(plan, visit);
                 }

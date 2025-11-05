@@ -19,7 +19,6 @@ public interface ConfiguratorService extends LoginService {
     String addPlace(String name, String description, String location);
 
     String addVisitType(String placeID, String title, String description, String meetLocation, List<TimeSlot> schedules,
-
                         boolean ticketRequired, int minParticipants, int maxParticipants, LocalDate validFrom, LocalDate validTo);
 
     void addVolunteer(String nickname, String defaultPassword);
@@ -57,9 +56,9 @@ public interface ConfiguratorService extends LoginService {
 
     void reopenAvailabilityWindow(LocalDate today);
 
+    void registerConfigurator(String nickname, String password);
 
+    List<String> listConfigurators();
 
-
-
-
+    boolean hasPendingConfiguratorSeeds();
 }

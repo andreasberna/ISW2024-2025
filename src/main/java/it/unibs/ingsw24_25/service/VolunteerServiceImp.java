@@ -2,10 +2,7 @@ package it.unibs.ingsw24_25.service;
 
 import it.unibs.ingsw24_25.DTO.VisitOccurrenceDTO;
 import it.unibs.ingsw24_25.model.*;
-import it.unibs.ingsw24_25.repository.MonthlyVisitPlanRepository;
-import it.unibs.ingsw24_25.repository.SettingsRepository;
-import it.unibs.ingsw24_25.repository.VisitTypeRepository;
-import it.unibs.ingsw24_25.repository.VolunteerRepository;
+import it.unibs.ingsw24_25.repository.*;
 import it.unibs.ingsw24_25.util.DTOMapper;
 
 import java.time.LocalDate;
@@ -19,16 +16,19 @@ public class VolunteerServiceImp implements VolunteerService{
     private final SettingsRepository settingsRepository;
     private final MonthlyVisitPlanRepository monthlyVisitPlanRepository;
     private final VisitTypeRepository visitTypeRepository;
+    private final ProvisionedCredentialsRepository provisionedCredentialsRepository;
     private final Set<String> defaultCredentialsValidated = new HashSet<> ();
 
     public VolunteerServiceImp(VolunteerRepository volunteerRepository,
                                SettingsRepository settingsRepository,
                                MonthlyVisitPlanRepository monthlyVisitPlanRepository,
-                               VisitTypeRepository visitTypeRepository) {
+                               VisitTypeRepository visitTypeRepository,
+                               ProvisionedCredentialsRepository provisionedCredentialsRepository) {
         this.volunteerRepository = Objects.requireNonNull(volunteerRepository);
         this.settingsRepository = Objects.requireNonNull(settingsRepository);
         this.monthlyVisitPlanRepository = Objects.requireNonNull(monthlyVisitPlanRepository);
         this.visitTypeRepository = Objects.requireNonNull(visitTypeRepository);
+        this.provisionedCredentialsRepository = Objects.requireNonNull(provisionedCredentialsRepository);
     }
 
 
@@ -94,6 +94,7 @@ public class VolunteerServiceImp implements VolunteerService{
         volunteer.deactivate ();
         volunteerRepository.deleteByNickname (volunteer.getNickname ());
         defaultCredentialsValidated.remove(volunteer.getNickname ());
+        provisionedCredentialsRepository.consumeVolunteerCredential (volunteer.getNickname ());
     }
     @Override
     public List<VisitOccurrenceDTO> loadConfirmedGuidedVisits(String nickname, YearMonth month) {
@@ -141,6 +142,11 @@ public class VolunteerServiceImp implements VolunteerService{
         if (!volunteer.isFirstAccessPending ())
             throw new IllegalStateException ("Le credenziali personali sono già state impostate");
         String sanitizedPassword = requireNonBlank(password, "la Password di default non può essere nulla");
+        String expectedPassword = provisionedCredentialsRepository.findVolunteerPassword(volunteer.getNickname())
+                .orElseThrow(() -> new IllegalStateException("Credenziali di primo accesso non registrate"));
+        if (!expectedPassword.equals(sanitizedPassword)) {
+            throw new IllegalArgumentException("Credenziali di primo accesso non valide");
+        }
         if (!volunteer.passwordMatches (sanitizedPassword))
             throw new IllegalArgumentException ("Credenziali di primo accesso non valide");
 
@@ -166,13 +172,15 @@ public class VolunteerServiceImp implements VolunteerService{
         if (!current.equalsIgnoreCase(sanitizedNickname) && volunteerRepository.findByNickname(sanitizedNickname).isPresent())
             throw new IllegalArgumentException("Nickname già presente");
 
-        if(!defaultCredentialsValidated.remove(current))
+        if(!defaultCredentialsValidated.contains (current))
             throw new IllegalStateException ("Credenziali di default non ancora verificate");
 
         volunteerRepository.deleteByNickname(current);
         volunteer.setNickname(sanitizedNickname);
         volunteer.setPersonalCredentials (sanitizedPassword);
         volunteerRepository.save(volunteer);
+        provisionedCredentialsRepository.consumeVolunteerCredential (current);
+        defaultCredentialsValidated.remove(current);
     }
 
     @Override

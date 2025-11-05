@@ -19,57 +19,85 @@ import java.util.stream.Collectors;
 
 public class ConfiguratorServiceImp implements ConfiguratorService {
 
-    public static final String DEFAULT_NICKNAME = "config";
-    public static final String DEFAULT_PASSWORD = "psswrd";
-
     private final PlaceRepository placeRepository;
     private final VisitTypeRepository visitTypeRepository;
     private final VolunteerRepository volunteerRepository;
     private final SettingsRepository settingsRepository;
     private final MonthlyVisitPlanRepository monthlyVisitPlanRepository;
     private final ConfiguratorRepository configuratorRepository;
+    private final ProvisionedCredentialsRepository provisionedCredentialsRepository;
     private final VolunteerService volunteerService;
-    private boolean defaultCredentialsValidated = false;
+    private final Set<String> defaultCredentialsValidated = new HashSet<>();
 
     public ConfiguratorServiceImp(PlaceRepository placeRepository,
                                   VisitTypeRepository visitTypeRepository,
                                   VolunteerRepository volunteerRepository, SettingsRepository settingsRepository,
                                   MonthlyVisitPlanRepository monthlyVisitPlanRepository,
                                   ConfiguratorRepository configuratorRepository,
+                                  ProvisionedCredentialsRepository provisionedCredentialsRepository,
                                   VolunteerService volunteerService) {
-        this.placeRepository = placeRepository;
-        this.visitTypeRepository = visitTypeRepository;
-        this.volunteerRepository = volunteerRepository;
-        this.settingsRepository = settingsRepository;
-        this.monthlyVisitPlanRepository = monthlyVisitPlanRepository;
-        this.configuratorRepository = configuratorRepository;
-        this.volunteerService = volunteerService;
+        this.placeRepository = Objects.requireNonNull(placeRepository, "Il repository dei luoghi non può essere nullo");
+        this.visitTypeRepository = Objects.requireNonNull(visitTypeRepository, "Il repository dei tipi visita non può essere nullo");
+        this.volunteerRepository = Objects.requireNonNull(volunteerRepository, "Il repository dei volontari non può essere nullo");
+        this.settingsRepository = Objects.requireNonNull(settingsRepository, "Il repository delle impostazioni non può essere nullo");
+        this.monthlyVisitPlanRepository = Objects.requireNonNull(monthlyVisitPlanRepository, "Il repository dei piani mensili non può essere nullo");
+        this.configuratorRepository = Objects.requireNonNull(configuratorRepository, "Il repository dei configuratori non può essere nullo");
+        this.provisionedCredentialsRepository = Objects.requireNonNull(provisionedCredentialsRepository, "Il repository delle credenziali provisionate non può essere nullo");
+        this.volunteerService = Objects.requireNonNull(volunteerService, "Il servizio dei volontari non può essere nullo");
     }
 
     @Override
     public boolean isFirstAccessPending(String nickname) {
-        return !configuratorRepository.exists ();
+        String sanitized = sanitizeNickname(nickname);
+        if (sanitized == null) {
+            return false;
+        }
+        return provisionedCredentialsRepository.hasConfiguratorCredential(sanitized);
     }
 
     @Override
     public void verifyDefaultCredentials(String nickname, String password) {
-        if(!isFirstAccessPending(nickname))
-            throw new IllegalStateException("Le credenziali personali sono già state impostate");
-        if(!DEFAULT_NICKNAME.equals(nickname) || !DEFAULT_PASSWORD.equals(password))
-            throw new IllegalArgumentException ("Credenziali di primo accesso non valide");
+        String sanitizedNickname = sanitizeNickname(nickname);
+        if (sanitizedNickname == null) {
+            throw new IllegalArgumentException("Il nickname di default non può essere vuoto");
+        }
+        if (!isFirstAccessPending(sanitizedNickname)) {
+            throw new IllegalStateException ("Le credenziali personali sono già state impostate");
+        }
+        String sanitizedPassword = requireNonBlank(password, "La password di default non può essere vuota");
+        String expectedPassword = provisionedCredentialsRepository.findConfiguratorPassword(sanitizedNickname)
+                .orElseThrow(() -> new IllegalStateException("Credenziali di primo accesso non registrate"));
 
-        defaultCredentialsValidated = true;
+        if (!expectedPassword.equals(sanitizedPassword)) {
+            throw new IllegalArgumentException("Credenziali di primo accesso non valide");
+        }
+
+        defaultCredentialsValidated.add(sanitizedNickname);
     }
 
     @Override
     public void setPersonalCredentials(String currentNickname, String newNickname, String password) {
-        if (!isFirstAccessPending(currentNickname)) throw new IllegalStateException ("Le credenziali sono già state configurate");
-        if (!defaultCredentialsValidated) throw new IllegalStateException ("Credenziali di default non ancora verificate");
+        String sanitizedDefault = sanitizeNickname(currentNickname);
+        if (sanitizedDefault == null) {
+            throw new IllegalArgumentException("Il nickname di default non può essere vuoto");
+        }
+        if (!isFirstAccessPending(sanitizedDefault)) {
+            throw new IllegalStateException("Le credenziali sono già state configurate");
+        }
+        if (!defaultCredentialsValidated.contains(sanitizedDefault)) {
+            throw new IllegalStateException("Credenziali di default non ancora verificate");
+        }
 
         String sanitizedNickname = requireNonBlank(newNickname, "Il nickname non può essere vuoto");
         String sanitizedPassword = requireNonBlank(password, "La password non può essere vuota");
-        configuratorRepository.save (new Configurator (sanitizedNickname, sanitizedPassword));
-        defaultCredentialsValidated = false;
+
+        if (isConfiguratorNicknameTaken(sanitizedNickname)) {
+            throw new IllegalArgumentException("Esiste già un configuratore con questo nickname");
+        }
+
+        configuratorRepository.save(new Configurator(sanitizedNickname, sanitizedPassword));
+        provisionedCredentialsRepository.consumeConfiguratorCredential(sanitizedDefault);
+        defaultCredentialsValidated.remove(sanitizedDefault);
     }
 
     @Override
@@ -95,6 +123,24 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
             throw new IllegalArgumentException(message);
         }
         return value.trim();
+    }
+
+    private String sanitizeNickname(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean isConfiguratorNicknameTaken(String nickname) {
+        return configuratorRepository.load()
+                .map(map -> map.values().stream()
+                        .filter(Objects::nonNull)
+                        .map(Configurator::getNickname)
+                        .filter(Objects::nonNull)
+                        .anyMatch(existing -> existing.equalsIgnoreCase(nickname)))
+                .orElse(false);
     }
 
     @Override
@@ -198,10 +244,11 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
         ensureCatalogChangeWindowAvailable();
         String sanitizedNick = requireNonBlank (nickname, "nickname non può essere vuoto");
         String sanitizedPassword = requireNonBlank (defaultPassword, "password non può essere vuoto");
-        if(volunteerRepository.findByNickname (nickname).isPresent()) throw new IllegalArgumentException ("Nickname già presente");
+        if(volunteerRepository.findByNickname (sanitizedNick).isPresent()) throw new IllegalArgumentException ("Nickname già presente");
         Volunteer volunteer = new  Volunteer (sanitizedNick, sanitizedPassword);
         volunteer.setVisitsAttending (new ArrayList<> ());
         volunteerRepository.save(volunteer);
+        provisionedCredentialsRepository.registerVolunteerCredential(sanitizedNick, sanitizedPassword);
     }
 
     @Override
@@ -552,6 +599,48 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
                 .orElseThrow(() -> new IllegalStateException("Nessun piano disponibile per " + month));
         return DTOMapper.planToDTO(plan, visitTypeRepository.findAll());
     }
+
+    @Override
+    public void registerConfigurator(String nickname, String password) {
+        String sanitizedNickname = requireNonBlank(nickname, "Il nickname non può essere vuoto");
+        String sanitizedPassword = requireNonBlank(password, "La password non può essere vuota");
+
+        Map<String, Configurator> existing = configuratorRepository.load()
+                .map(HashMap::new)
+                .orElseGet(HashMap::new);
+
+        boolean duplicate = existing.keySet().stream()
+                .filter(Objects::nonNull)
+                .anyMatch(registered -> registered.equalsIgnoreCase(sanitizedNickname));
+
+        if (duplicate) {
+            throw new IllegalArgumentException("Esiste già un configuratore con questo nickname");
+        }
+
+        if (provisionedCredentialsRepository.hasConfiguratorCredential(sanitizedNickname)) {
+            throw new IllegalArgumentException("Esiste già un configuratore con questo nickname");
+        }
+
+        configuratorRepository.save(new Configurator(sanitizedNickname, sanitizedPassword));
+    }
+
+    @Override
+    public List<String> listConfigurators() {
+        return configuratorRepository.load()
+                .map(map -> map.values().stream()
+                        .filter(Objects::nonNull)
+                        .map(Configurator::getNickname)
+                        .filter(Objects::nonNull)
+                        .sorted(String.CASE_INSENSITIVE_ORDER)
+                        .toList())
+                .orElseGet(List::of);
+    }
+
+    @Override
+    public boolean hasPendingConfiguratorSeeds() {
+        return provisionedCredentialsRepository.hasAnyConfiguratorCredential();
+    }
+
 
     private SystemSettings requireInitializedSettings() {
         return settingsRepository.load ()
