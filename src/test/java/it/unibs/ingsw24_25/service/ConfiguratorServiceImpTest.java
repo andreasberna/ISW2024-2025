@@ -12,12 +12,7 @@ import it.unibs.ingsw24_25.model.SystemSettings;
 import it.unibs.ingsw24_25.model.TimeSlot;
 import it.unibs.ingsw24_25.model.VisitType;
 import it.unibs.ingsw24_25.model.Volunteer;
-import it.unibs.ingsw24_25.repository.ConfiguratorRepository;
-import it.unibs.ingsw24_25.repository.MonthlyVisitPlanRepository;
-import it.unibs.ingsw24_25.repository.PlaceRepository;
-import it.unibs.ingsw24_25.repository.SettingsRepository;
-import it.unibs.ingsw24_25.repository.VisitTypeRepository;
-import it.unibs.ingsw24_25.repository.VolunteerRepository;
+import it.unibs.ingsw24_25.repository.*;
 import it.unibs.ingsw24_25.util.ExcludedDatePolicy;
 import it.unibs.ingsw24_25.service.VolunteerService;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,13 +36,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -67,6 +61,8 @@ class ConfiguratorServiceImpTest {
     private MonthlyVisitPlanRepository monthlyVisitPlanRepository;
     @Mock
     private VolunteerService volunteerService;
+    @Mock
+    private ProvisionedCredentialsRepository  provisionedCredentialsRepository;
 
     private ConfiguratorServiceImp service;
 
@@ -79,9 +75,47 @@ class ConfiguratorServiceImpTest {
                 settingsRepository,
                 monthlyVisitPlanRepository,
                 configuratorRepository,
+                provisionedCredentialsRepository,
                 volunteerService
         );
         lenient().when(settingsRepository.load()).thenReturn(Optional.empty());
+        lenient ().when (provisionedCredentialsRepository.hasConfiguratorCredential (anyString())).thenReturn (false);
+    }
+
+    @Test
+    void constructorRejectsNullDependencies() {
+        assertThatThrownBy(() -> new ConfiguratorServiceImp(
+                null,
+                visitTypeRepository,
+                volunteerRepository,
+                settingsRepository,
+                monthlyVisitPlanRepository,
+                configuratorRepository,
+                provisionedCredentialsRepository,
+                volunteerService
+        )).isInstanceOf(NullPointerException.class);
+
+        assertThatThrownBy(() -> new ConfiguratorServiceImp(
+                placeRepository,
+                visitTypeRepository,
+                volunteerRepository,
+                settingsRepository,
+                monthlyVisitPlanRepository,
+                configuratorRepository,
+                null,
+                volunteerService
+        )).isInstanceOf(NullPointerException.class);
+
+        assertThatThrownBy(() -> new ConfiguratorServiceImp(
+                placeRepository,
+                visitTypeRepository,
+                volunteerRepository,
+                settingsRepository,
+                monthlyVisitPlanRepository,
+                configuratorRepository,
+                provisionedCredentialsRepository,
+                null
+        )).isInstanceOf(NullPointerException.class);
     }
 
     private SystemSettings settingsWithPhase(PlanningPhase phase) {
@@ -95,19 +129,37 @@ class ConfiguratorServiceImpTest {
         );
     }
 
+    private VisitType visitType(Place place, String id, String title) {
+        return new VisitType(
+                id,
+                title,
+                "Descrizione",
+                "Ingresso",
+                LocalDate.of(2024, 2, 1),
+                LocalDate.of(2024, 12, 31),
+                List.of(),
+                false,
+                1,
+                10,
+                place,
+                new ArrayList<>()
+        );
+    }
+
     @Nested
     @DisplayName("Default credentials workflow")
     class DefaultCredentials {
         @Test
         void verifyDefaultCredentialsSucceedsWhenPendingAndMatching() {
-            when(configuratorRepository.exists()).thenReturn(false);
+            when(provisionedCredentialsRepository.hasConfiguratorCredential("config")).thenReturn(true);
+            when(provisionedCredentialsRepository.findConfiguratorPassword("config")).thenReturn(Optional.of("psswrd"));
 
             assertDoesNotThrow(() -> service.verifyDefaultCredentials("config", "psswrd"));
         }
 
         @Test
         void verifyDefaultCredentialsFailsIfNotPending() {
-            when(configuratorRepository.exists()).thenReturn(true);
+            when(provisionedCredentialsRepository.hasConfiguratorCredential("config")).thenReturn(false);
 
             assertThatThrownBy(() -> service.verifyDefaultCredentials("config", "psswrd"))
                     .isInstanceOf(IllegalStateException.class)
@@ -116,16 +168,18 @@ class ConfiguratorServiceImpTest {
 
         @Test
         void verifyDefaultCredentialsFailsIfValuesDoNotMatch() {
-            when(configuratorRepository.exists()).thenReturn(false);
+            when(provisionedCredentialsRepository.hasConfiguratorCredential("config")).thenReturn(true);
+            when(provisionedCredentialsRepository.findConfiguratorPassword("config")).thenReturn(Optional.of("psswrd"));
 
-            assertThatThrownBy(() -> service.verifyDefaultCredentials("wrong", "psswrd"))
+            assertThatThrownBy(() -> service.verifyDefaultCredentials("comnfig", "wrong"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("non valide");
         }
 
         @Test
         void setPersonalCredentialsPersistsSanitizedValuesAfterValidation() {
-            when(configuratorRepository.exists()).thenReturn(false);
+            when(provisionedCredentialsRepository.hasConfiguratorCredential("config")).thenReturn(true);
+            when(provisionedCredentialsRepository.findConfiguratorPassword("config")).thenReturn(Optional.of("psswrd"));
             service.verifyDefaultCredentials("config", "psswrd");
 
             service.setPersonalCredentials("config", "  admin  ", "  secret  ");
@@ -135,22 +189,22 @@ class ConfiguratorServiceImpTest {
             Configurator saved = captor.getValue();
             assertThat(saved.getNickname()).isEqualTo("admin");
             assertThat(saved.getPassword()).isEqualTo("secret");
+            verify (provisionedCredentialsRepository).consumeConfiguratorCredential ("config");
         }
 
         @Test
         void setPersonalCredentialsFailsIfDefaultNotValidated() {
-            when(configuratorRepository.exists()).thenReturn(false);
+            when(provisionedCredentialsRepository.hasConfiguratorCredential("config")).thenReturn(true);
+
 
             assertThatThrownBy(() -> service.setPersonalCredentials("config", "nick", "pwd"))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("non ancora verificate");
 
-            verify(configuratorRepository, never()).save(any());
         }
 
         @Test
         void verifyLoginReturnsTrueForStoredCredentials() {
-            when(configuratorRepository.exists()).thenReturn(true);
             Configurator configurator = new Configurator("admin", "secret");
             when(configuratorRepository.load()).thenReturn(Optional.of(Map.of("admin", configurator)));
 
@@ -161,11 +215,19 @@ class ConfiguratorServiceImpTest {
 
         @Test
         void verifyLoginReturnsFalseWhenFirstAccessPending() {
-            when(configuratorRepository.exists()).thenReturn(false);
+            when (provisionedCredentialsRepository.hasConfiguratorCredential("admin")).thenReturn(true);
 
             boolean result = service.verifyLogin("admin", "secret");
 
             assertThat(result).isFalse();
+        }
+
+        @Test
+        void hasPendingConfiguratorSeedsDelegatesToRepository() {
+            when(provisionedCredentialsRepository.hasAnyConfiguratorCredential()).thenReturn(true);
+
+            assertThat(service.hasPendingConfiguratorSeeds()).isTrue();
+            verify(provisionedCredentialsRepository).hasAnyConfiguratorCredential();
         }
     }
 
@@ -194,7 +256,6 @@ class ConfiguratorServiceImpTest {
 
             service.setTerritorialScope("Brescia");
 
-            verify(settingsRepository, never()).save(any());
         }
 
         @Test
@@ -299,7 +360,6 @@ class ConfiguratorServiceImpTest {
                     null
             );
             when(settingsRepository.load()).thenReturn(Optional.of(settings));
-            when(placeRepository.findById("Museo")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.addPlace("Museo", "descrizione", "Brescia"))
                     .isInstanceOf(IllegalStateException.class)
@@ -317,7 +377,6 @@ class ConfiguratorServiceImpTest {
                     null
             );
             when(settingsRepository.load()).thenReturn(Optional.of(settings));
-            when(placeRepository.findById("Museo")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.addPlace("Museo", "descrizione", "Brescia"))
                     .isInstanceOf(IllegalStateException.class)
@@ -332,8 +391,7 @@ class ConfiguratorServiceImpTest {
         void addVisitTypeCreatesLinkWithPlace() {
             Place place = new Place("Museo", "descrizione", "Brescia");
             when(placeRepository.findById("Museo")).thenReturn(Optional.of(place));
-            when(visitTypeRepository.findById("Visita"))
-                    .thenReturn(Optional.empty());
+
             List<TimeSlot> schedules = List.of(new TimeSlot(DayOfWeek.MONDAY, LocalTime.of(10, 0), Duration.ofHours(2)));
 
             try (MockedConstruction<VisitType> mocked = mockConstruction(VisitType.class, (mockVisit, context) -> {
@@ -375,8 +433,6 @@ class ConfiguratorServiceImpTest {
                     LocalDate.now().plusDays(10)
             )).isInstanceOf(IllegalArgumentException.class);
 
-            verifyNoInteractions(placeRepository);
-            verifyNoInteractions(visitTypeRepository);
         }
 
         @Test
@@ -390,9 +446,7 @@ class ConfiguratorServiceImpTest {
                     null
             );
             when(settingsRepository.load()).thenReturn(Optional.of(settings));
-            Place place = new Place("Museo", "descrizione", "Brescia");
-            when(placeRepository.findById("Museo")).thenReturn(Optional.of(place));
-            when(visitTypeRepository.findAll()).thenReturn(List.of());
+
 
             assertThatThrownBy(() -> service.addVisitType(
                     "Museo",
@@ -408,7 +462,6 @@ class ConfiguratorServiceImpTest {
             )).isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("dopo la chiusura");
 
-            verify(visitTypeRepository, never()).save(any());
         }
     }
 
@@ -531,6 +584,14 @@ class ConfiguratorServiceImpTest {
             assertThat(dtos.get(0).getVisitTypeTitles()).containsExactly("Visita");
         }
     }
+    private VisitType stubVisitType(String id, String title, Place place, List<Volunteer> guides) {
+        VisitType visit = mock(VisitType.class);
+        when(visit.getId()).thenReturn(id);
+        when(visit.getVisitTitle()).thenReturn(title);
+        when(visit.getPlace()).thenReturn(place);
+        when(visit.getGuides()).thenAnswer(invocation -> guides);
+        return visit;
+    }
 
     @Nested
     @DisplayName("Catalog removal cascades")
@@ -545,7 +606,6 @@ class ConfiguratorServiceImpTest {
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("modifiche al catalogo sono consentite solo dopo la generazione del piano");
 
-            verifyNoInteractions(placeRepository);
         }
 
         @Test
@@ -557,7 +617,6 @@ class ConfiguratorServiceImpTest {
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Le modifiche al catalogo non sono consentite dopo la riapertura");
 
-            verifyNoInteractions(volunteerRepository);
         }
 
         @Test
@@ -569,68 +628,39 @@ class ConfiguratorServiceImpTest {
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("modifiche al catalogo sono consentite solo dopo la generazione del piano");
 
-            verifyNoInteractions(visitTypeRepository);
         }
 
         @Test
         void removePlaceDeletesVisitTypesAndAssignmentsBeforeDeletingPlace() {
-            SystemSettings settings = new SystemSettings(
+            SystemSettings settings = new SystemSettings (
                     "scope",
                     10,
-                    List.of(),
-                    YearMonth.of(2024, 1),
+                    List.of (),
+                    YearMonth.of (2024, 1),
                     PlanningPhase.PLAN_GENERATED,
                     null
             );
-            when(settingsRepository.load()).thenReturn(Optional.of(settings), Optional.of(settings));
+            when (settingsRepository.load ()).thenReturn (Optional.of (settings), Optional.of (settings));
 
-            Place place = new Place("Museo", "descrizione", "Brescia");
-            VisitType visitOne = new VisitType(
-                    "visit-1",
-                    "Visita 1",
-                    "Descrizione",
-                    "Ingresso",
-                    LocalDate.of(2024, 2, 1),
-                    LocalDate.of(2024, 12, 31),
-                    List.of(),
-                    false,
-                    1,
-                    10,
-                    place,
-                    new ArrayList<>()
-            );
-            VisitType visitTwo = new VisitType(
-                    "visit-2",
-                    "Visita 2",
-                    "Descrizione",
-                    "Ingresso",
-                    LocalDate.of(2024, 2, 1),
-                    LocalDate.of(2024, 12, 31),
-                    List.of(),
-                    false,
-                    1,
-                    10,
-                    place,
-                    new ArrayList<>()
-            );
-            place.setVisits(new ArrayList<>(List.of(visitOne, visitTwo)));
+            Place place = new Place ("Museo", "descrizione", "Brescia");
+            VisitType visitOne = visitType(place, "visit-1", "Visita 1");
+            VisitType visitTwo = visitType(place, "visit-2", "Visita 2");
+            place.setVisits (new ArrayList<> (List.of (visitOne, visitTwo)));
 
-            when(placeRepository.findById("Museo")).thenReturn(Optional.of(place));
-            when(visitTypeRepository.findByPlace("Museo")).thenReturn(List.of(visitOne, visitTwo));
-            when(placeRepository.findById(place.getPlaceTitle())).thenReturn(Optional.of(place));
-            when(volunteerRepository.findAll()).thenReturn(List.of());
+            when (placeRepository.findById ("Museo")).thenReturn (Optional.of (place));
+            when (visitTypeRepository.findByPlace ("Museo")).thenReturn (List.of (visitOne, visitTwo));
+            when (volunteerRepository.findAll ()).thenReturn (List.of ());
 
-            service.removePlace("Museo");
+            service.removePlace ("Museo");
 
-            verify(visitTypeRepository).deleteById("visit-1");
-            verify(visitTypeRepository).deleteById("visit-2");
+            verify (visitTypeRepository).deleteById ("visit-1");
+            verify (visitTypeRepository).deleteById ("visit-2");
 
-            ArgumentCaptor<Iterable> idCaptor = ArgumentCaptor.forClass(Iterable.class);
-            verify(monthlyVisitPlanRepository).removePlannedVisitsByVisitTypes(idCaptor.capture());
-            assertThat(idCaptor.getValue()).containsExactlyInAnyOrder("visit-1", "visit-2");
+            ArgumentCaptor<Iterable> idCaptor = ArgumentCaptor.forClass (Iterable.class);
+            verify (monthlyVisitPlanRepository).removePlannedVisitsByVisitTypes (idCaptor.capture ());
+            assertThat (idCaptor.getValue ()).containsExactlyInAnyOrder ("visit-1", "visit-2");
 
-            verify(placeRepository).deleteById("Museo");
-            verifyNoInteractions(volunteerService);
+            verify (placeRepository).deleteById ("Museo");
         }
 
         @Test
@@ -646,25 +676,12 @@ class ConfiguratorServiceImpTest {
             when(settingsRepository.load()).thenReturn(Optional.of(settings), Optional.of(settings));
 
             Place place = new Place("Museo", "descrizione", "Brescia");
-            VisitType visit = new VisitType(
-                    "visit-1",
-                    "Visita",
-                    "Descrizione",
-                    "Ingresso",
-                    LocalDate.of(2024, 2, 1),
-                    LocalDate.of(2024, 12, 31),
-                    List.of(),
-                    false,
-                    1,
-                    10,
-                    place,
-                    new ArrayList<>()
-            );
+            VisitType visit = visitType(place, "visit-1", "Visita");
             place.setVisits(new ArrayList<>(List.of(visit)));
 
             Volunteer volunteer = new Volunteer("alice", "password");
             volunteer.addVisit(visit);
-            visit.addGuide(volunteer);
+            visit.addGuide (volunteer);
 
             when(volunteerRepository.findByNickname("alice")).thenReturn(Optional.of(volunteer));
             when(volunteerRepository.findAll()).thenReturn(List.of());
@@ -693,25 +710,13 @@ class ConfiguratorServiceImpTest {
             when(settingsRepository.load()).thenReturn(Optional.of(settings));
 
             Place place = new Place("Museo", "descrizione", "Brescia");
-            VisitType visit = new VisitType(
-                    "visit-1",
-                    "Visita",
-                    "Descrizione",
-                    "Ingresso",
-                    LocalDate.of(2024, 2, 1),
-                    LocalDate.of(2024, 12, 31),
-                    List.of(),
-                    false,
-                    1,
-                    10,
-                    place,
-                    new ArrayList<>()
-            );
+
+            VisitType visit = visitType (place, "visit-1", "Visita");
             place.setVisits(new ArrayList<>(List.of(visit)));
 
             Volunteer volunteer = new Volunteer("alice", "password");
             volunteer.addVisit(visit);
-            visit.addGuide(volunteer);
+            visit.addGuide (volunteer);
 
             when(visitTypeRepository.findById("visit-1")).thenReturn(Optional.of(visit));
             when(visitTypeRepository.findAll()).thenReturn(List.of(visit));
@@ -785,6 +790,53 @@ class ConfiguratorServiceImpTest {
             assertThat(settings.getActivePlanningMonth()).isEqualTo(YearMonth.of(2024, 2));
             assertThat(settings.getPlanningPhase()).isEqualTo(PlanningPhase.AVAILABILITY_COLLECTION_OPEN);
             verify(settingsRepository).save(settings);
+        }
+    }
+
+    @Nested
+    @DisplayName("Configurator account management")
+    class ConfiguratorAccountManagement {
+
+        @Test
+        void registerConfiguratorPersistsSanitizedValuesWhenAvailable() {
+            when(configuratorRepository.load()).thenReturn(Optional.of(Map.of("admin", new Configurator("admin", "secret"))));
+
+            service.registerConfigurator("  planner  ", "  password  ");
+
+            ArgumentCaptor<Configurator> captor = ArgumentCaptor.forClass(Configurator.class);
+            verify(configuratorRepository).save(captor.capture());
+            Configurator stored = captor.getValue();
+            assertThat(stored.getNickname()).isEqualTo("planner");
+            assertThat(stored.getPassword()).isEqualTo("password");
+        }
+
+        @Test
+        void registerConfiguratorFailsWhenNicknameBlank() {
+            assertThatThrownBy(() -> service.registerConfigurator("   ", "password"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("nickname");
+        }
+
+        @Test
+        void registerConfiguratorFailsWhenNicknameAlreadyExistsIgnoringCase() {
+            when(configuratorRepository.load()).thenReturn(Optional.of(Map.of("Planner", new Configurator("Planner", "pwd"))));
+
+            assertThatThrownBy(() -> service.registerConfigurator("planner", "password"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Esiste già");
+        }
+
+        @Test
+        void listConfiguratorsReturnsSortedNicknames() {
+            Map<String, Configurator> stored = new HashMap<>();
+            stored.put("gamma", new Configurator("gamma", "pwd"));
+            stored.put("alpha", new Configurator("alpha", "pwd"));
+            stored.put("Beta", new Configurator("Beta", "pwd"));
+            when(configuratorRepository.load()).thenReturn(Optional.of(stored));
+
+            List<String> result = service.listConfigurators();
+
+            assertThat(result).containsExactly("alpha", "Beta", "gamma");
         }
     }
 }

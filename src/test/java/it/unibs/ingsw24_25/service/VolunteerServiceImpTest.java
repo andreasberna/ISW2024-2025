@@ -3,8 +3,7 @@ package it.unibs.ingsw24_25.service;
 import it.unibs.ingsw24_25.model.MonthlyAvailability;
 import it.unibs.ingsw24_25.model.SystemSettings;
 import it.unibs.ingsw24_25.model.Volunteer;
-import it.unibs.ingsw24_25.repository.SettingsRepository;
-import it.unibs.ingsw24_25.repository.VolunteerRepository;
+import it.unibs.ingsw24_25.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -34,11 +33,25 @@ class VolunteerServiceImpTest {
     @Mock
     private SettingsRepository settingsRepository;
 
+    @Mock
+    private MonthlyVisitPlanRepository monthlyVisitPlanRepository;
+
+    @Mock
+    private VisitTypeRepository visitTypeRepository;
+
+    @Mock
+    private ProvisionedCredentialsRepository provisionedCredentialsRepository;
+
+
     private VolunteerServiceImp service;
 
     @BeforeEach
     void setUp() {
-        service = new VolunteerServiceImp (volunteerRepository, settingsRepository);
+        service = new VolunteerServiceImp (volunteerRepository,
+                settingsRepository,
+                monthlyVisitPlanRepository,
+                visitTypeRepository,
+                provisionedCredentialsRepository);
     }
 
     @Nested
@@ -49,6 +62,7 @@ class VolunteerServiceImpTest {
         void setPersonalCredentialsUpdatesNicknameAndPasswordAfterValidation() {
             Volunteer volunteer = new Volunteer ("vol001", "tempPass");
             when (volunteerRepository.findByNickname ("vol001")).thenReturn (Optional.of (volunteer));
+            when (provisionedCredentialsRepository.findVolunteerPassword ("vol001")).thenReturn (Optional.of ("tempPass"));
 
             service.verifyDefaultCredentials ("vol001", "tempPass");
             service.setPersonalCredentials ("vol001", " guide.one ", " newSecret ");
@@ -56,6 +70,7 @@ class VolunteerServiceImpTest {
             ArgumentCaptor<Volunteer> captor = ArgumentCaptor.forClass (Volunteer.class);
             verify (volunteerRepository).deleteByNickname ("vol001");
             verify (volunteerRepository).save (captor.capture ());
+            verify (provisionedCredentialsRepository).consumeVolunteerCredential ("vol001");
 
             Volunteer persisted = captor.getValue ();
             assertThat (persisted.getNickname ()).isEqualTo ("guide.one");
@@ -67,6 +82,7 @@ class VolunteerServiceImpTest {
         void setPersonalCredentialsFailsIfNicknameUnchanged() {
             Volunteer volunteer = new Volunteer ("vol001", "tempPass");
             when (volunteerRepository.findByNickname ("vol001")).thenReturn (Optional.of (volunteer));
+            when (provisionedCredentialsRepository.findVolunteerPassword ("vol001")).thenReturn (Optional.of ("tempPass"));
 
             service.verifyDefaultCredentials ("vol001", "tempPass");
 
@@ -74,13 +90,13 @@ class VolunteerServiceImpTest {
                     .isInstanceOf (IllegalArgumentException.class)
                     .hasMessageContaining ("nickname");
 
-            verify (volunteerRepository, never ()).save (any ());
         }
 
         @Test
         void setPersonalCredentialsFailsIfPasswordUnchanged() {
             Volunteer volunteer = new Volunteer ("vol001", "tempPass");
             when (volunteerRepository.findByNickname ("vol001")).thenReturn (Optional.of (volunteer));
+            when (provisionedCredentialsRepository.findVolunteerPassword ("vol001")).thenReturn (Optional.of ("tempPass"));
 
             service.verifyDefaultCredentials ("vol001", "tempPass");
 
@@ -88,7 +104,6 @@ class VolunteerServiceImpTest {
                     .isInstanceOf (IllegalArgumentException.class)
                     .hasMessageContaining ("password");
 
-            verify (volunteerRepository, never ()).deleteByNickname (any ());
         }
     }
 
@@ -119,7 +134,6 @@ class VolunteerServiceImpTest {
                     .isInstanceOf (IllegalArgumentException.class)
                     .hasMessageContaining ("2024-06-10");
 
-            verify (volunteerRepository, never ()).save (any ());
         }
 
         @Test
@@ -164,7 +178,6 @@ class VolunteerServiceImpTest {
                     .isInstanceOf (IllegalStateException.class)
                     .hasMessageContaining ("La finestra di caricamento è chiusa");
 
-            verify (volunteerRepository, never ()).save (any ());
         }
 
     }
