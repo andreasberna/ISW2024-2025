@@ -1,5 +1,6 @@
 package it.unibs.ingsw24_25.service;
 
+import it.unibs.ingsw24_25.DTO.MonthlyPlanDTO;
 import it.unibs.ingsw24_25.DTO.PlaceDTO;
 import it.unibs.ingsw24_25.DTO.VisitTypeDTO;
 import it.unibs.ingsw24_25.DTO.VolunteerDTO;
@@ -34,6 +35,31 @@ public interface ConfiguratorService extends LoginService {
     List<VolunteerDTO> listVolunteerWVisitType();
 
     void setBlackoutDates(List<LocalDate> excludedDates);
+
+    void closeAvailabilityWindow(LocalDate today);
+
+    void applyCatalogChange(Runnable change);
+
+    MonthlyPlanDTO generateMonthlyPlan(YearMonth targetMonth);
+
+    MonthlyPlanDTO getMonthlyPlanDetails(YearMonth month);
+
+    void assignVolunteerToPlannedVisit(YearMonth month, LocalDate date, TimeSlot slot,
+                                       String visitTypeId, String volunteerNickname);
+
+    void removePlannedVisit(YearMonth month, LocalDate date, TimeSlot slot, String visitTypeId);
+
+    void removePlace(String placeID);
+
+    void removeVisitType(String visitTypeId);
+
+    void removeVolunteer(String nickname);
+
+    void reopenAvailabilityWindow(LocalDate today);
+
+
+
+
 
 
 }

@@ -91,6 +91,8 @@ public final class JSONSupport {
     private static final Type VOL_MAP_TYPE = new TypeToken<Map<String, Volunteer>>(){}.getType();
     private static final Type PLACE_MAP_TYPE = new TypeToken<Map<String, Place>>(){}.getType();
     private static final Type VISIT_MAP_TYPE = new TypeToken<Map<String, VisitType>>(){}.getType();
+    private static final Type PLAN_MAP_TYPE = new TypeToken<Map<String, MonthlyVisitPlan>>(){}.getType();
+
 
     private JSONSupport() {
         // Costruttore privato: classe utility
@@ -141,6 +143,18 @@ public final class JSONSupport {
             return Collections.emptyMap();
         }
         return GSON.fromJson(json, VISIT_MAP_TYPE);
+    }
+
+    // ---------- MonthlyVisitPlan ----------
+    public static String serializeMonthlyVisitPlanMap(Map<String, MonthlyVisitPlan> map) {
+        return GSON.toJson(map, PLAN_MAP_TYPE);
+    }
+
+    public static Map<String, MonthlyVisitPlan> deserializeMonthlyVisitPlanMap(String json) {
+        if (isBlank(json)) {
+            return Collections.emptyMap();
+        }
+        return GSON.fromJson(json, PLAN_MAP_TYPE);
     }
 
     // ---------- SystemSettings (singolo oggetto) ----------

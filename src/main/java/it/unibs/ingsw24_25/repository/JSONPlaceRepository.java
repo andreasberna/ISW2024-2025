@@ -1,6 +1,7 @@
 package it.unibs.ingsw24_25.repository;
 
 import it.unibs.ingsw24_25.model.Place;
+import it.unibs.ingsw24_25.model.VisitType;
 import it.unibs.ingsw24_25.util.JSONSupport;
 
 import java.io.IOException;
@@ -10,11 +11,17 @@ import java.nio.file.StandardCopyOption;
 import java.util.*;
 
 public class JSONPlaceRepository implements PlaceRepository {
-    private Path file;
-    private Map<String, Place> cache;
+    private final Path file;
+    private final Map<String, Place> cache;
+    private final MonthlyVisitPlanRepository planRepository;
 
-    public JSONPlaceRepository(Path file){
+    public JSONPlaceRepository(Path file) {
+        this(file, null);
+    }
+
+    public JSONPlaceRepository(Path file, MonthlyVisitPlanRepository planRepository) {
         this.file = file;
+        this.planRepository = planRepository;
         this.cache = new HashMap<> ();
         init();
     }
@@ -64,6 +71,16 @@ public class JSONPlaceRepository implements PlaceRepository {
 
     @Override
     public void deleteById(String id) {
-        if(cache.remove (id) != null) persist();
+        Place removed = cache.remove(id);
+        if(removed != null) {
+            persist();
+            if (planRepository != null) {
+                List<String> visitTypeIds = removed.getVisits().stream()
+                        .map(VisitType::getId)
+                        .filter(Objects::nonNull)
+                        .toList();
+                planRepository.removePlannedVisitsByVisitTypes(visitTypeIds);
+            }
+        }
     }
 }

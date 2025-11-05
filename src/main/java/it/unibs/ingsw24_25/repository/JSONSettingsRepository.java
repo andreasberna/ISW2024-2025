@@ -70,7 +70,10 @@ public class JSONSettingsRepository implements SettingsRepository {
         this.cache = new SystemSettings (
                 cache.getTerritorialScope (),
                 newValue,
-                new ArrayList<> (cache.getExcludedDates ())
+                new ArrayList<> (cache.getExcludedDates ()),
+                cache.getActivePlanningMonth (),
+                cache.getPlanningPhase (),
+                cache.getLastAvailabilityWindowClosure ()
         );
     }
 }

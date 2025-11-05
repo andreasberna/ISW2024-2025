@@ -1,9 +1,6 @@
 package it.unibs.ingsw24_25.service;
 
-import it.unibs.ingsw24_25.model.AssignedShift;
-import it.unibs.ingsw24_25.model.MonthlyAvailability;
-import it.unibs.ingsw24_25.model.SystemSettings;
-import it.unibs.ingsw24_25.model.Volunteer;
+import it.unibs.ingsw24_25.model.*;
 import it.unibs.ingsw24_25.repository.SettingsRepository;
 import it.unibs.ingsw24_25.repository.VolunteerRepository;
 
@@ -36,6 +33,7 @@ public class VolunteerServiceImp implements VolunteerService{
                 availability.getSubmittedOn ()
         );
         ensureAvailabilityNotOnBlackoutDates(sanitized);
+        ensureSubmissionAllowed(sanitized.getReferenceMonth ());
         volunteer.registerAvailability (sanitized, today);
         volunteerRepository.save(volunteer);
     }
@@ -61,6 +59,29 @@ public class VolunteerServiceImp implements VolunteerService{
         Volunteer volunteer = loadVolunteer(nickname);
         volunteer.assignShifts (month, shifts);
         volunteerRepository.save(volunteer);
+    }
+
+    @Override
+    public Map<String, MonthlyAvailability> snapshotAvailabilities(YearMonth month, LocalDate capturedOn) {
+        Objects.requireNonNull (month, "Il mese di riferimento non può essere nullo");
+        LocalDate snapshotDate = capturedOn == null ? LocalDate.now() : capturedOn;
+        Map<String, MonthlyAvailability> snapshots = new HashMap<> ();
+        for (Volunteer volunteer : volunteerRepository.findAll()) {
+            if (volunteer == null || !volunteer.isActive ()) continue;
+
+            volunteer.findAvailability (month)
+                    .map (availability -> availability.createSnapshot (snapshotDate))
+                    .ifPresent (snapshot -> snapshots.put(volunteer.getNickname(), snapshot));
+        }
+        return snapshots;
+    }
+
+    @Override
+    public void removeVolunteerAccount(String nickname) {
+        Volunteer volunteer = loadVolunteer(nickname);
+        volunteer.deactivate ();
+        volunteerRepository.deleteByNickname (volunteer.getNickname ());
+        defaultCredentialsValidated.remove(volunteer.getNickname ());
     }
 
     private Volunteer loadVolunteer(String nickname){
@@ -165,5 +186,17 @@ public class VolunteerServiceImp implements VolunteerService{
                         );
                     }
                 });
+    }
+
+    private void ensureSubmissionAllowed(YearMonth referenceMonth) {
+        settingsRepository.load().ifPresent(settings -> {
+            YearMonth activePlanningMonth = settings.getActivePlanningMonth();
+            PlanningPhase phase = settings.getPlanningPhase ();
+            if (activePlanningMonth == null || phase == null) {return;}
+            if (activePlanningMonth.equals(referenceMonth) && phase != PlanningPhase.AVAILABILITY_COLLECTION_OPEN) {
+                throw new IllegalStateException (
+                        "La finestra di caricamento per il mese " + referenceMonth + " è stata chiusa dal configuratore");
+            }
+        });
     }
 }

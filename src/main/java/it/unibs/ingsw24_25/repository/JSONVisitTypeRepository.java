@@ -13,11 +13,17 @@ import java.util.stream.Collectors;
 
 public class JSONVisitTypeRepository implements VisitTypeRepository {
 
-    private Path file;
-    private Map<String, VisitType> cache;
+    private final Path file;
+    private final Map<String, VisitType> cache;
+    private final MonthlyVisitPlanRepository planRepository;
 
     public JSONVisitTypeRepository(Path file) {
+        this(file, null);
+    }
+
+    public JSONVisitTypeRepository(Path file, MonthlyVisitPlanRepository planRepository) {
         this.file = file;
+        this.planRepository = planRepository;
         this.cache = new HashMap<> ();
         init();
     }
@@ -28,7 +34,14 @@ public class JSONVisitTypeRepository implements VisitTypeRepository {
             if(Files.exists (file) && Files.size (file) > 0){
                 String json = Files.readString (file);
                 Map<String, VisitType> loaded = JSONSupport.deserializeVisitTypeMap (json);
-                if(loaded != null) cache.putAll (loaded);
+                if(loaded != null) {
+                    loaded.values().forEach(visitType -> {
+                        if (visitType != null) {
+                            String identifier = visitType.getId();
+                            cache.put(identifier, visitType);
+                        }
+                    });
+                }
             }
         }catch(IOException e){
             System.err.println("Warn: impossibile leggere " + file);
@@ -55,8 +68,10 @@ public class JSONVisitTypeRepository implements VisitTypeRepository {
 
     @Override
     public List<VisitType> findByPlace(String placeID) {
-        List<VisitType> ret = cache.values ().stream ().filter (visitType -> visitType.getPlace ().getPlaceTitle ().equals (placeID)).collect (Collectors.toList ());
-        return ret;
+        return cache.values ().stream()
+                .filter(Objects::nonNull)
+                .filter(visitType -> visitType.getPlace() != null && Objects.equals(visitType.getPlace().getPlaceTitle(), placeID))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -76,12 +91,18 @@ public class JSONVisitTypeRepository implements VisitTypeRepository {
     @Override
     public void save(VisitType visitType) {
         Objects.requireNonNull (visitType);
-        cache.put (visitType.getVisitTitle (),  visitType);
+        cache.put (visitType.getId (),  visitType);
         persist();
     }
 
     @Override
     public void deleteById(String id) {
-        if(cache.remove (id) != null) persist ();
+        VisitType removed = cache.remove(id);
+        if (removed != null) {
+            persist();
+            if (planRepository != null) {
+                planRepository.removePlannedVisitsByVisitType(removed.getId());
+            }
+        }
     }
 }

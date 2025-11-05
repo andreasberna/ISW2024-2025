@@ -13,6 +13,7 @@ public class Volunteer {
     private List<VisitType> visitsAttending = new ArrayList<> ();
     private Map<YearMonth, MonthlyAvailability> availabilities = new HashMap<> ();
     private Map<YearMonth, List<AssignedShift>> scheduledShifts = new HashMap<> ();
+    private boolean active = true;
 
     public Volunteer(String nickname, String password) {
         this.nickname = Objects.requireNonNull(nickname, "nickname nullo");
@@ -75,7 +76,9 @@ public class Volunteer {
                     availability.getReferenceMonth (),
                     availability.getPreferredDays (),
                     availability.getWeeklyFrequency (),
-                    availability.getSubmittedOn ()
+                    availability.getSubmittedOn (),
+                    availability.isSnapshot (),
+                    availability.getSnapshotCapturedOn ()
             ));
         });
         return Collections.unmodifiableMap(copy);
@@ -92,19 +95,26 @@ public class Volunteer {
                 availability.getReferenceMonth (),
                 availability.getPreferredDays (),
                 availability.getWeeklyFrequency (),
-                availability.getSubmittedOn ()
+                availability.getSubmittedOn (),
+                availability.isSnapshot (),
+                availability.getSnapshotCapturedOn ()
         );
         return Optional.of(copy);
     }
     public void registerAvailability(MonthlyAvailability availability, LocalDate today) {
         Objects.requireNonNull(availability, "la disponibilità non può essere nulla");
         Objects.requireNonNull (today);
+        if (!active) {
+            throw new IllegalStateException("Il volontario non è attivo e non può registrare disponibilità");
+        }
         availability.ensureConsistency ();
         MonthlyAvailability sanitized = new MonthlyAvailability (
                 availability.getReferenceMonth (),
                 availability.getPreferredDays (),
                 availability.getWeeklyFrequency (),
-                availability.getSubmittedOn ()
+                availability.getSubmittedOn (),
+                false,
+                null
         );
         if (!AvailabilitySubmissionPolicy.isWindowOpen (sanitized.getReferenceMonth (), today))
             throw new IllegalStateException ("La finestra di caricamento è chiusa per il mese " + sanitized.getReferenceMonth());
@@ -150,6 +160,28 @@ public class Volunteer {
         scheduledShifts.put(month, new ArrayList<> (copies));
     }
 
+    public void removeAvailability(YearMonth month) {
+        Objects.requireNonNull(month, "il mese non può essere nullo");
+        ensureAvailabilityInitialized();
+        availabilities.remove(month);
+    }
+
+    public void clearAvailabilities() {
+        ensureAvailabilityInitialized();
+        availabilities.clear();
+    }
+
+    public void removeScheduledShifts(YearMonth month) {
+        Objects.requireNonNull(month, "il mese non può essere nullo");
+        ensureShiftsInitialized ();
+        scheduledShifts.remove(month);
+    }
+
+    public void clearScheduledShifts() {
+        ensureShiftsInitialized ();
+        scheduledShifts.clear();
+    }
+
     private void ensureAvailabilityInitialized() {
         if (availabilities == null) {
             availabilities = new HashMap<>();
@@ -167,6 +199,25 @@ public class Volunteer {
 
     public void setPersonalCredentialsDefined(boolean personalCredentialsDefined) {
         this.personalCredentialsDefined = personalCredentialsDefined;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public void deactivate() {
+        this.active = false;
+        clearAvailabilities();
+        clearScheduledShifts();
+        ensureVisitInitialized().clear();
+    }
+
+    public void activate() {
+        this.active = true;
     }
 
     private void setDefaultPassword(String password) {

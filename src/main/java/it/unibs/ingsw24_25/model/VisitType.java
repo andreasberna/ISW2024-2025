@@ -1,9 +1,13 @@
 package it.unibs.ingsw24_25.model;
 
 import java.time.LocalDate;
-import java.util.List;
+import java.time.YearMonth;
+import java.time.temporal.TemporalAdjusters;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class VisitType {
+    private String id;
     private String visitTitle;
     private String visitDescription;
     private String visitMeetLocation;
@@ -24,29 +28,46 @@ public class VisitType {
                      LocalDate validFrom, LocalDate validTo, List<TimeSlot> schedules,
                      Boolean ticketRequired, int minParticipants, int maxParticipants,
                      Place place, List<Volunteer> guides ) {
+        this(UUID.randomUUID().toString(), visitTitle, visitDescription, visitMeetLocation,
+                validFrom, validTo, schedules, ticketRequired, minParticipants, maxParticipants,
+                place, guides);
+    }
+
+    public VisitType(String id, String visitTitle, String visitDescription, String visitMeetLocation,
+                     LocalDate validFrom, LocalDate validTo, List<TimeSlot> schedules,
+                     Boolean ticketRequired, int minParticipants, int maxParticipants,
+                     Place place, List<Volunteer> guides ) {
+        this.id = sanitizeId(id);
         this.visitTitle = visitTitle;
         this.visitDescription = visitDescription;
         this.visitMeetLocation = visitMeetLocation;
         this.validFrom = validFrom;
         this.validTo = validTo;
-        this.schedules = schedules;
+        this.schedules = schedules == null ? new ArrayList<> () : new ArrayList<>(schedules);
         this.ticketRequired = ticketRequired;
         this.minParticipants = minParticipants;
         this.maxParticipants = maxParticipants;
         this.place = place;
-        this.guides = guides;
+        this.guides = guides == null ? new ArrayList<> () : new ArrayList<>(guides);
+    }
+    public VisitType(){
+        // costruttore per la (de)serializzazione
     }
 
     public void addSchedule(TimeSlot timeSlot){
+        ensureSchedulesInitialized();
         this.schedules.add(timeSlot);
     }
     public void removeSchedule(TimeSlot timeSlot){
+        ensureSchedulesInitialized();
         this.schedules.remove(timeSlot);
     }
     public void addGuide(Volunteer volunteer){
+        ensureGuidesInitialized();
         this.guides.add(volunteer);
     }
     public void removeGuide(Volunteer volunteer){
+        ensureGuidesInitialized();
         this.guides.remove(volunteer);
     }
 
@@ -69,6 +90,8 @@ public class VisitType {
     }
 
     public void updateState(LocalDate today){
+        if (visitDate == null){return;}
+
         LocalDate deadline = visitDate.minusDays (3);
 
         switch (state) {
@@ -92,6 +115,69 @@ public class VisitType {
             }
 
         }
+    }
+
+    public String getId() {
+        if (id == null || id.isBlank()) {
+            id = UUID.randomUUID().toString();
+        }
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = sanitizeId(id);
+    }
+
+    public List<PlannedVisit> generateOccurrences(YearMonth month) {
+        Objects.requireNonNull(month, "Il mese di generazione non può essere nullo");
+        ensureSchedulesInitialized();
+        if (schedules.isEmpty()) {
+            return List.of();
+        }
+
+        LocalDate monthStart = month.atDay(1);
+        LocalDate monthEnd = month.atEndOfMonth();
+        LocalDate effectiveStart = validFrom == null ? monthStart : (validFrom.isAfter(monthStart) ? validFrom : monthStart);
+        LocalDate effectiveEnd = validTo == null ? monthEnd : (validTo.isBefore(monthEnd) ? validTo : monthEnd);
+        if (effectiveStart.isAfter(effectiveEnd)) {
+            return List.of();
+        }
+
+        return schedules.stream()
+                .filter(Objects::nonNull)
+                .flatMap(slot -> computeDatesForSlot(slot, monthStart, monthEnd).stream()
+                        .filter(date -> !date.isBefore(effectiveStart) && !date.isAfter(effectiveEnd))
+                        .map(date -> new PlannedVisit(date, cloneSlot(slot), getId(), true)))
+                .sorted(Comparator.comparing(PlannedVisit::getDate)
+                        .thenComparing(p -> p.getTimeSlot().getStartTime()))
+                .collect(Collectors.collectingAndThen(Collectors.toCollection(ArrayList::new), List::copyOf));
+    }
+
+    public boolean isValidOn(LocalDate date) {
+        Objects.requireNonNull(date, "La data non può essere nulla");
+        boolean afterStart = validFrom == null || !date.isBefore(validFrom);
+        boolean beforeEnd = validTo == null || !date.isAfter(validTo);
+        return afterStart && beforeEnd;
+    }
+
+    private TimeSlot cloneSlot(TimeSlot slot) {
+        if (slot == null) {
+            return null;
+        }
+        return new TimeSlot(slot.getDay(), slot.getStartTime(), slot.getDuration());
+    }
+
+    private List<LocalDate> computeDatesForSlot(TimeSlot slot, LocalDate monthStart, LocalDate monthEnd) {
+        List<LocalDate> dates = new ArrayList<>();
+        if (slot == null) {
+            return dates;
+        }
+        LocalDate current = monthStart.with(TemporalAdjusters.nextOrSame(slot.getDay()));
+        while (!current.isAfter(monthEnd)) {
+            dates.add(current);
+            current = current.with(TemporalAdjusters.next(slot.getDay()));
+        }
+        return dates;
     }
 
 
@@ -126,10 +212,11 @@ public class VisitType {
         this.validTo = validTo;
     }
     public List<TimeSlot> getSchedules() {
+        ensureSchedulesInitialized();
         return schedules;
     }
     public void setSchedules(List<TimeSlot> schedules) {
-        this.schedules = schedules;
+        this.schedules = schedules == null ? new ArrayList<> () : new ArrayList<>(schedules);
     }
     public Boolean getTicketRequired() {
         return ticketRequired;
@@ -156,16 +243,36 @@ public class VisitType {
         this.place = place;
     }
     public List<Volunteer> getGuides() {
+        ensureGuidesInitialized();
         return guides;
     }
     public void setGuides(List<Volunteer> guides) {
-        this.guides = guides;
+        this.guides = guides == null ? new ArrayList<> () : new ArrayList<>(guides);
     }
     public VisitState getState() {
         return state;
     }
     public int getEnrolled() {
         return enrolled;
+    }
+
+    private void ensureSchedulesInitialized() {
+        if (schedules == null) {
+            schedules = new ArrayList<>();
+        }
+    }
+
+    private void ensureGuidesInitialized() {
+        if (guides == null) {
+            guides = new ArrayList<>();
+        }
+    }
+
+    private String sanitizeId(String candidate) {
+        if (candidate == null || candidate.isBlank()) {
+            return UUID.randomUUID().toString();
+        }
+        return candidate.trim();
     }
 
 }

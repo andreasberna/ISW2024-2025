@@ -1,14 +1,13 @@
 package it.unibs.ingsw24_25.util;
 
 import it.unibs.ingsw24_25.DTO.*;
-import it.unibs.ingsw24_25.model.Place;
-import it.unibs.ingsw24_25.model.TimeSlot;
-import it.unibs.ingsw24_25.model.VisitType;
-import it.unibs.ingsw24_25.model.Volunteer;
+import it.unibs.ingsw24_25.model.*;
 
 import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public final class DTOMapper {
@@ -26,7 +25,7 @@ public final class DTOMapper {
         String end = endTimeString (vt);
         int duration = durationMinutes (vt);
         return new VisitTypeDTO (
-                vt.getVisitTitle (), daySummary, start, end,
+                vt.getId (), vt.getVisitTitle (), daySummary, start, end,
                 duration, vt.getTicketRequired (),
                 vt.getMinParticipants (), vt.getMaxParticipants (), vt.getPlace ().getPlaceTitle (), vt.getState ());
 
@@ -59,6 +58,82 @@ public final class DTOMapper {
                 .toList ();
 
         return new VolunteerDTO (v.getNickname (), v.getPassword (), v.isFirstAccessPending (), titles, availabilityDTOs, shiftsDTOs);
+    }
+
+    public static MonthlyPlanDTO planToDTO(MonthlyVisitPlan plan, List<VisitType> visitTypes) {
+        if (plan == null) {
+            return null;
+        }
+        Map<String, VisitType> visitTypeMap = visitTypes == null
+                ? Map.of()
+                : visitTypes.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(VisitType::getId, visitType -> visitType, (left, right) -> left));
+
+        List<PlannedVisitDTO> plannedVisits = plan.getPlannedVisits().stream()
+                .filter(Objects::nonNull)
+                .map(visit -> toPlannedVisitDTO(plan, visit, visitTypeMap.get(visit.getVisitTypeId())))
+                .sorted(DTOMapper::comparePlannedVisits)
+                .toList();
+
+        List<PlanAvailabilityDTO> availabilitySnapshots = plan.getAvailabilitySnapshots().entrySet().stream()
+                .map(entry -> toPlanAvailabilityDTO(entry.getKey(), entry.getValue()))
+                .filter(Objects::nonNull)
+                .sorted((left, right) -> left.getVolunteerNickname().compareToIgnoreCase(right.getVolunteerNickname()))
+                .toList();
+
+        return new MonthlyPlanDTO(
+                plan.getTargetMonth(),
+                plan.getPhase(),
+                plan.getAvailabilityWindowClosedOn(),
+                plannedVisits,
+                availabilitySnapshots
+        );
+    }
+
+    private static PlannedVisitDTO toPlannedVisitDTO(MonthlyVisitPlan plan,
+                                                     PlannedVisit visit,
+                                                     VisitType visitType) {
+        TimeSlot slot = visit.getTimeSlot();
+        return new PlannedVisitDTO(
+                plan.getTargetMonth(),
+                visit.getDate(),
+                slot != null && slot.getDay() != null ? slot.getDay() : visit.getDate().getDayOfWeek(),
+                slot != null ? slot.getStartTime() : null,
+                slot != null && slot.getDuration() != null ? slot.getDuration().toMinutes() : 0,
+                visit.getVisitTypeId(),
+                visitType != null && visitType.getVisitTitle() != null ? visitType.getVisitTitle() : visit.getVisitTypeId(),
+                visit.isProposable(),
+                visit.getAssignedVolunteerIds()
+        );
+    }
+
+    private static int comparePlannedVisits(PlannedVisitDTO left, PlannedVisitDTO right) {
+        int dateComparison = left.getDate().compareTo(right.getDate());
+        if (dateComparison != 0) {
+            return dateComparison;
+        }
+        if (left.getStartTime() != null && right.getStartTime() != null) {
+            int timeComparison = left.getStartTime().compareTo(right.getStartTime());
+            if (timeComparison != 0) {
+                return timeComparison;
+            }
+        }
+        return left.getVisitTypeId().compareToIgnoreCase(right.getVisitTypeId());
+    }
+
+    private static PlanAvailabilityDTO toPlanAvailabilityDTO(String nickname, MonthlyAvailability availability) {
+        if (availability == null) {
+            return null;
+        }
+        return new PlanAvailabilityDTO(
+                nickname,
+                availability.getReferenceMonth(),
+                availability.getPreferredDays().stream().sorted().toList(),
+                availability.getWeeklyFrequency(),
+                availability.getSubmittedOn(),
+                availability.getSnapshotCapturedOn()
+        );
     }
 
     private static int compareShift(AssignedShiftDTO left, AssignedShiftDTO right) {

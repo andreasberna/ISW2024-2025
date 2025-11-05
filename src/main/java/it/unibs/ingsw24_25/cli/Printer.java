@@ -1,6 +1,7 @@
 package it.unibs.ingsw24_25.cli;
 
 import it.unibs.ingsw24_25.DTO.*;
+import it.unibs.ingsw24_25.model.PlanningPhase;
 import it.unibs.ingsw24_25.model.TimeSlot;
 import it.unibs.ingsw24_25.model.VisitState;
 
@@ -19,6 +20,10 @@ public class Printer {
     public static final String VISIT_TYPE_EMPTY_MESSAGE = "Nessuna visita registrata al momento";
     public static final String VOLUNTEER_HEADER = "Volontari disponibili:";
     public static final String VOLUNTEER_EMPTY_MESSAGE = "Nessun volontario disponibile al momento";
+    public static final String PLAN_HEADER = "Piano mensile:";
+    public static final String PLAN_EMPTY_VISITS_MESSAGE = "Nessuna visita pianificata per il mese selezionato.";
+    public static final String SNAPSHOT_HEADER = "Disponibilità bloccate:";
+    public static final String SNAPSHOT_EMPTY_MESSAGE = "Nessuna disponibilità bloccata.";
 
     private final PrintStream out;
 
@@ -67,6 +72,41 @@ public class Printer {
                 .forEach(out::println);
     }
 
+    public void printAvailabilitySnapshots(List<PlanAvailabilityDTO> snapshots) {
+        out.println(SNAPSHOT_HEADER);
+        if (snapshots == null || snapshots.isEmpty()) {
+            out.println(SNAPSHOT_EMPTY_MESSAGE);
+            return;
+        }
+
+        snapshots.stream()
+                .map(this::formatPlanAvailability)
+                .forEach(out::println);
+    }
+
+    public void printMonthlyPlan(MonthlyPlanDTO plan) {
+        out.println(PLAN_HEADER);
+        if (plan == null) {
+            out.println(PLAN_EMPTY_VISITS_MESSAGE);
+            return;
+        }
+
+        out.println("Mese: " + plan.getTargetMonth());
+        out.println("Fase: " + formatPlanningPhase(plan.getPhase()));
+        if (plan.getAvailabilityWindowClosedOn() != null) {
+            out.println("Finestra disponibilità chiusa il: " + plan.getAvailabilityWindowClosedOn());
+        }
+
+        List<PlannedVisitDTO> visits = plan.getPlannedVisits();
+        if (visits == null || visits.isEmpty()) {
+            out.println(PLAN_EMPTY_VISITS_MESSAGE);
+        } else {
+            visits.stream()
+                    .map(this::formatPlannedVisit)
+                    .forEach(out::println);
+        }
+    }
+
     private String format(PlaceDTO place) {
         if (place == null) {
             return "";
@@ -85,9 +125,10 @@ public class Printer {
             return "";
         }
 
-        return ("Visita: %s%nGiorni: %s%nOrario: %s - %s%nDurata: %d minuti%nTicket richiesto: %s%nPartecipanti: %d-%d%nStato: %s" + System.lineSeparator())
+        return ("Visita: %s%nID: %s%nGiorni: %s%nOrario: %s - %s%nDurata: %d minuti%nTicket richiesto: %s%nPartecipanti: %d-%d%nStato: %s" + System.lineSeparator())
                 .formatted(
                         safe(visitType.getTitle()),
+                        safe(visitType.getId()),
                         safe(visitType.getDaySummary()),
                         safe(visitType.getStartTime()),
                         safe(visitType.getendTime()),
@@ -125,6 +166,68 @@ public class Printer {
                         availabilitySection,
                         shiftSection
                 );
+    }
+
+    private String formatPlanAvailability(PlanAvailabilityDTO snapshot) {
+        if (snapshot == null) {
+            return "";
+        }
+        String days = snapshot.getPreferredDays() == null || snapshot.getPreferredDays().isEmpty()
+                ? "-"
+                : snapshot.getPreferredDays().stream()
+                .sorted()
+                .map(day -> capitalize(day.getDisplayName(TextStyle.FULL, Locale.ITALIAN)))
+                .collect(Collectors.joining(", "));
+
+        String captured = snapshot.getSnapshotCapturedOn() == null
+                ? "-"
+                : snapshot.getSnapshotCapturedOn().toString();
+
+        return "Volontario: %s | Mese: %s | Giorni: %s | Frequenza: %d | Inviata il: %s | Snapshot il: %s"
+                .formatted(
+                        safe(snapshot.getVolunteerNickname()),
+                        snapshot.getReferenceMonth(),
+                        days,
+                        snapshot.getWeeklyFrequency(),
+                        snapshot.getSubmittedOn(),
+                        captured
+                );
+    }
+
+    private String formatPlannedVisit(PlannedVisitDTO visit) {
+        if (visit == null) {
+            return "";
+        }
+        String dayLabel = visit.getDayOfWeek() == null
+                ? "-"
+                : capitalize(visit.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ITALIAN));
+        String startLabel = visit.getStartTime() == null ? "-" : visit.getStartTime().toString();
+        String volunteers = visit.getAssignedVolunteers() == null || visit.getAssignedVolunteers().isEmpty()
+                ? "-"
+                : visit.getAssignedVolunteers().stream()
+                .map(this::safe)
+                .collect(Collectors.joining(", "));
+        String title = visit.getVisitTitle() == null ? visit.getVisitTypeId() : visit.getVisitTitle();
+
+        return "- %s (%s) | Tipo: %s [%s] | Inizio: %s | Durata: %d minuti | Proponibile: %s | Volontari: %s"
+                .formatted(
+                        visit.getDate(),
+                        dayLabel,
+                        title,
+                        safe(visit.getVisitTypeId()),
+                        startLabel,
+                        visit.getDurationMinutes(),
+                        visit.isProposable() ? "Sì" : "No",
+                        volunteers
+                );
+    }
+
+    private String formatPlanningPhase(PlanningPhase phase) {
+        if (phase == null) {
+            return "-";
+        }
+        String label = phase.name().toLowerCase(Locale.ITALIAN).replace('_', ' ');
+        return capitalize(label);
     }
 
     private String formatAvailabilities(List<VolunteerAvailabilityDTO> availabilities){
