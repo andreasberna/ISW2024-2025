@@ -20,6 +20,9 @@ public class VolunteerCliSupport {
     private static final String VOLUNTEER_NO_SHIFTS = "Nessun turno assegnato a %s per il mese %s.";
     private static final String VOLUNTEER_CONFIRMED_HEADER = "Visite confermate per %s nel mese %s:";
     private static final String VOLUNTEER_NO_CONFIRMED = "Nessuna visita confermata per %s nel mese %s.";
+    private static final String VOLUNTEER_BOOKING_SUMMARY = "  %d) %s | %s | Orario: %s | Prenotazioni: %d | Codici: %s";
+    private static final String VOLUNTEER_BOOKING_DETAIL_HEADER = "Dettaglio prenotazioni per %s (%s):";
+    private static final String VOLUNTEER_BOOKING_DETAIL_NO_ITEMS = "  Nessuna prenotazione registrata.";
 
     private VolunteerCliSupport() {
     }
@@ -74,7 +77,7 @@ public class VolunteerCliSupport {
                 .forEach(printer::println);
     }
 
-    static void displayConfirmedVisits(VolunteerService service,
+    static List<VisitOccurrenceDTO> displayConfirmedVisits(VolunteerService service,
                                        Printer printer,
                                        String nickname,
                                        YearMonth month,
@@ -86,38 +89,76 @@ public class VolunteerCliSupport {
 
         DateTimeFormatter effectiveFormatter = formatter == null ? DateTimeFormatter.ofPattern("yyyy-MM") : formatter;
 
-        List<VisitOccurrenceDTO> visits = service.loadConfirmedGuidedVisits (nickname, month);
+        List<VisitOccurrenceDTO> visits = service.loadConfirmedGuidedVisits (nickname, month).stream ()
+                .filter (Objects::nonNull)
+                .sorted (Comparator.comparing (VisitOccurrenceDTO::getDate)
+                        .thenComparing (VisitOccurrenceDTO::getStartTime, Comparator.nullsLast (Comparator.naturalOrder ()))
+                        .thenComparing (VisitOccurrenceDTO::getTitle, Comparator.nullsLast (String::compareToIgnoreCase)))
+                .toList ();
         if (visits.isEmpty()) {
             printer.println (VOLUNTEER_NO_CONFIRMED.formatted(nickname, month.format(effectiveFormatter)));
-            return;
+            return List.of();
         }
 
         printer.println (VOLUNTEER_CONFIRMED_HEADER.formatted(nickname, month.format(effectiveFormatter)));
-        visits.stream()
-                .sorted(Comparator.comparing(VisitOccurrenceDTO::getDate)
-                        .thenComparing(VisitOccurrenceDTO::getStartTime, Comparator.nullsLast (Comparator.naturalOrder ())))
-                .map (VolunteerCliSupport::formatConfirmedVisit)
-                .forEach(printer::println);
+
+        int index = 1;
+        for (VisitOccurrenceDTO visit : visits) {
+            printer.println (formatConfirmedVisitSummary (index++, visit));
+        }
+        return visits;
     }
 
-    private static String formatConfirmedVisit(VisitOccurrenceDTO visit) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("- ").append(visit.getDate()).append(" | ").append(visit.getTitle()).append(System.lineSeparator());
-        builder.append("  Orario: ").append(visit.getStartTime() == null ? "-" : visit.getStartTime()).append(System.lineSeparator());
-        builder.append("  Ritrovo: ").append(visit.getMeetingPoint()).append(System.lineSeparator());
-        builder.append("  Partecipanti: ").append(visit.getBookedParticipants()).append(" / ").append(visit.getMaxParticipants()).append(System.lineSeparator());
-        if (!visit.getBookings().isEmpty()) {
-            builder.append("  Prenotazioni:").append(System.lineSeparator());
-            for (VisitBookingDTO booking : visit.getBookings()) {
-                builder.append("    * ").append(booking.getBeneficiaryName()).append(" - ")
-                        .append(booking.getParticipants()).append(" partecipanti");
-                if (booking.getNotes() != null && !booking.getNotes().isBlank()) {
-                    builder.append(" | Note: ").append(booking.getNotes());
-                }
-                builder.append(System.lineSeparator());
-            }
+    static void displayVisitBookings(Printer printer, VisitOccurrenceDTO visit) {
+        Objects.requireNonNull(printer, "Printer non può essere nullo");
+        Objects.requireNonNull(visit, "Visit non può essere nullo");
+
+        String title = visit.getTitle() == null || visit.getTitle ().isBlank () ? visit.getVisitTypeId () : visit.getTitle ();
+        printer.println (VOLUNTEER_BOOKING_DETAIL_HEADER.formatted(title, visit.getDate ()));
+
+        List<VisitBookingDTO> bookings = visit.getBookings () == null ? List.of () : visit.getBookings ();
+        if (bookings.isEmpty()) {
+            printer.println (VOLUNTEER_BOOKING_DETAIL_NO_ITEMS);
+            return;
         }
-        return builder.toString();
+
+        bookings.stream()
+                .filter (Objects::nonNull)
+                .forEach (booking -> printer.println (formatBookingDetailLine(booking)));
+    }
+
+    private static String formatBookingDetailLine(VisitBookingDTO booking) {
+        String code = booking.getCode () == null ? "" : booking.getCode ().trim ();
+        String beneficiary = booking.getBeneficiaryName () == null || booking.getBeneficiaryName ().isBlank ()
+                ? "-"
+                : booking.getBeneficiaryName ().trim ();
+        return " - Codice: %s | Prenotante: %s | Isceritti: %d".formatted (code, beneficiary, booking.getParticipants ());
+    }
+
+    private static String formatConfirmedVisitSummary(int index, VisitOccurrenceDTO visit) {
+        if (visit == null) {return "";}
+
+        String time = visit.getStartTime () == null ? "-" : visit.getStartTime ().toString ();
+        List<VisitBookingDTO> bookings = visit.getBookings () == null ? List.of () : visit.getBookings ();
+        String codes = bookings.stream ()
+                .filter (Objects::nonNull)
+                .map (VisitBookingDTO::getCode)
+                .filter (Objects::nonNull)
+                .map (String::trim)
+                .filter (code -> !code.isEmpty ())
+                .distinct ()
+                .sorted (String::compareToIgnoreCase)
+                .reduce ((left, right) -> left + ", " + right)
+                .orElse ("-");
+
+        return VOLUNTEER_BOOKING_SUMMARY.formatted (
+                index,
+                visit.getDate (),
+                visit.getTitle (),
+                time,
+                bookings.size (),
+                codes
+        );
     }
 
     private static void printAvailability(Printer printer, String nickname, MonthlyAvailability availability) {

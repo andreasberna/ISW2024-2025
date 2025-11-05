@@ -129,7 +129,7 @@ public class ConfiguratorCommandHandler {
     }
 
     private boolean authenticateCOnfigurator() {
-        if (service.isFirstAccessPending (ConfiguratorServiceImp.DEFAULT_NICKNAME)) return true;
+        if (service.listConfigurators ().isEmpty ()) return true;
 
         printer.println (MENU_SEPARATOR);
         printer.println (CONFIGURATOR_LOGIN_HEADER);

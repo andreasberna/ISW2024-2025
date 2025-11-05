@@ -1,5 +1,6 @@
 package it.unibs.ingsw24_25.cli;
 
+import it.unibs.ingsw24_25.DTO.VisitOccurrenceDTO;
 import it.unibs.ingsw24_25.model.MonthlyAvailability;
 import it.unibs.ingsw24_25.service.VolunteerService;
 
@@ -9,6 +10,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -36,6 +38,8 @@ public class VolunteerCommandHandler {
     private static final String VOLUNTEER_INVALID_DAY_INPUT = "Inserire almeno un giorno valido della settimana.";
     private static final String VOLUNTEER_UNKNOWN_DAY = "Giorno non riconosciuto: %s.";
     private static final String VOLUNTEER_AVAILABILITY_SUCCESS = "Disponibilità registrata correttamente.";
+    private static final String VOLUNTEER_VISIT_SELECTION_PROMPT = "Seleziona una visita per i dettagli prenotazioni (numero o \"back\"): ";
+    private static final String VOLUNTEER_INVALID_VISIT_SELECTION = "Selezione non valida. Inserire un numero di visita.";
     private static final DateTimeFormatter YEAR_MONTH_INPUT_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
 
     private final VolunteerService volunteerService;
@@ -230,11 +234,38 @@ public class VolunteerCommandHandler {
         if (month == null) {return true;}
 
         try{
-            VolunteerCliSupport.displayConfirmedVisits(volunteerService, printer, nickname, month, YEAR_MONTH_INPUT_FORMATTER);
+            List<VisitOccurrenceDTO> visits = VolunteerCliSupport.displayConfirmedVisits (volunteerService, printer, nickname, month,YEAR_MONTH_INPUT_FORMATTER);
+            if (!visits.isEmpty()) {
+                inspectVisitBooking (visits);
+            }
         } catch (IllegalArgumentException | IllegalStateException ex){
             printer.println(ERROR_PREFIX + safeMessage(ex));
         }
         return true;
+    }
+
+    private void inspectVisitBooking(List<VisitOccurrenceDTO> visits){
+        while (true) {
+            String selection = reader.readLine (VOLUNTEER_VISIT_SELECTION_PROMPT);
+            if (isBackCommand (selection)) {return;}
+
+            if (selection == null || selection.trim ().isEmpty ()){
+                printer.println(ERROR_PREFIX + VOLUNTEER_INVALID_VISIT_SELECTION);
+                continue;
+            }
+
+            String trimmed = selection.trim();
+            try {
+                int index = Integer.parseInt(trimmed);
+                if (index < 1 || index > visits.size()){
+                    printer.println(ERROR_PREFIX + VOLUNTEER_INVALID_VISIT_SELECTION);
+                    continue;
+                }
+                VolunteerCliSupport.displayVisitBookings(printer, visits.get (index-1));
+            } catch (NumberFormatException ex){
+                printer.println(ERROR_PREFIX + VOLUNTEER_INVALID_VISIT_SELECTION);
+            }
+        }
     }
 
     private String requireActiveVolunteerNickname() {

@@ -46,14 +46,14 @@ public class FirstAccessSetup {
     }
 
     public void run(){
-        if(!service.isFirstAccessPending (ConfiguratorServiceImp.DEFAULT_NICKNAME)) return;
+        if (!service.hasPendingConfiguratorSeeds ()) return;
 
         printer.println(MENU_SEPARATOR);
         printer.println(INTRO_MESSAGE);
         printer.println(MENU_SEPARATOR);
 
-        verifyDefaultCredentials();
-        setPersonalCredentials();
+        String defaultNickname = verifyDefaultCredentials ();
+        setPersonalCredentials(defaultNickname);
         configureTerritorialScope();
         configureMaxParticipants();
 
@@ -113,8 +113,9 @@ public class FirstAccessSetup {
         }
     }
 
-    private void verifyDefaultCredentials(){
+    private String verifyDefaultCredentials(){
         boolean verified = false;
+        String sanitizedNickname = null;
         while(!verified){
             String nickname = reader.readLine (DEFAULT_NICK_PROMPT);
             String password = reader.readLine (DEFAULT_PASS_PROMPT);
@@ -122,19 +123,21 @@ public class FirstAccessSetup {
                 service.verifyDefaultCredentials(nickname, password);
                 printer.println (DEFAULT_CREDENTIALS_SUCCESS);
                 verified = true;
+                sanitizedNickname = nickname == null ? null : nickname.trim ();
             } catch (IllegalArgumentException | IllegalStateException e){
                 printer.println(ERROR_PREFIX + safeMessage(e));
             }
         }
+        return sanitizedNickname;
     }
 
-    private void setPersonalCredentials(){
+    private void setPersonalCredentials(String defaultNickname){
         boolean stored = false;
         while(!stored) {
             String nickname = reader.readLine (PERSONAL_NICK_PROMPT);
             String password = reader.readLine (PERSONAL_PASS_PROMPT);
             try{
-                service.setPersonalCredentials(ConfiguratorServiceImp.DEFAULT_NICKNAME, nickname, password);
+                service.setPersonalCredentials(defaultNickname, nickname, password);
                 printer.println(PERSONAL_CREDENTIALS_SUCCESS);
                 stored = true;
             } catch(IllegalArgumentException | IllegalStateException e){

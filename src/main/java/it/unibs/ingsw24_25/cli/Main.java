@@ -16,15 +16,18 @@ public class Main {
     private static final Path SETTINGS_FILE = DATA_DIRECTORY.resolve("settings.json");
     private static final Path CONFIGURATORS_FILE = DATA_DIRECTORY.resolve("configurators.json");
     private static final Path MONTHLY_PLANS_FILE = DATA_DIRECTORY.resolve("monthly-plans.json");
+    private static final Path PROVISIONED_CREDENTIALS_FILE = DATA_DIRECTORY.resolve("provisioned-credentials.json");
 
     public static void main(String[] args) {
         MonthlyVisitPlanRepository monthlyVisitPlanRepository = new JSONMonthlyVisitPlanRepository (MONTHLY_PLANS_FILE);
         VolunteerRepository volunteerRepository = createVolunteerRepository(monthlyVisitPlanRepository);
         SettingsRepository settingsRepository = createSettingsRepository();
         VisitTypeRepository visitTypeRepository = new  JSONVisitTypeRepository (VISIT_TYPES_FILE, monthlyVisitPlanRepository);
+        ProvisionedCredentialsRepository provisionedCredentialsRepository = new JSONProvisionedCredentialsRepository (PROVISIONED_CREDENTIALS_FILE);
         VolunteerService volunteerService = new VolunteerServiceImp (volunteerRepository, settingsRepository,
-                monthlyVisitPlanRepository, visitTypeRepository);
-        ConfiguratorService service = buildService (volunteerRepository, settingsRepository, monthlyVisitPlanRepository, volunteerService, visitTypeRepository);
+                monthlyVisitPlanRepository, visitTypeRepository, provisionedCredentialsRepository);
+        ConfiguratorService service = buildService (volunteerRepository, settingsRepository, monthlyVisitPlanRepository,
+                provisionedCredentialsRepository, volunteerService, visitTypeRepository);
         BeneficiaryService beneficiaryService = buildBeneficiaryService(BENEFICIARY_FILE, volunteerRepository, monthlyVisitPlanRepository,
                 visitTypeRepository, settingsRepository);
         Printer printer = new Printer (System.out);
@@ -45,6 +48,7 @@ public class Main {
     private static ConfiguratorService buildService(VolunteerRepository volunteerRepository,
                                                     SettingsRepository settingsRepository,
                                                     MonthlyVisitPlanRepository monthlyVisitPlanRepository,
+                                                    ProvisionedCredentialsRepository provisionedCredentialsRepository,
                                                     VolunteerService volunteerService,
                                                     VisitTypeRepository visitTypeRepository) {
         PlaceRepository placeRepository = new JSONPlaceRepository (PLACES_FILE, monthlyVisitPlanRepository);
@@ -57,6 +61,7 @@ public class Main {
                 settingsRepository,
                 monthlyVisitPlanRepository,
                 configuratorRepository,
+                provisionedCredentialsRepository,
                 volunteerService
         );
 
