@@ -6,6 +6,7 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import it.unibs.ingsw24_25.model.*;
+import it.unibs.ingsw24_25.repository.ProvisionedCredentialStore;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -93,6 +94,7 @@ public final class JSONSupport {
     private static final Type VISIT_MAP_TYPE = new TypeToken<Map<String, VisitType>>(){}.getType();
     private static final Type PLAN_MAP_TYPE = new TypeToken<Map<String, MonthlyVisitPlan>>(){}.getType();
     private static final Type BENEFICIARY_MAP_TYPE = new TypeToken<Map<String, Beneficiary>>(){}.getType();
+    private static final Type PROVISIONED_CREDENTIALS_TYPE = new TypeToken<ProvisionedCredentialStore>(){}.getType();
 
     private JSONSupport() {
         // Costruttore privato: classe utility
@@ -180,6 +182,19 @@ public final class JSONSupport {
             return null;
         }
         return GSON.fromJson(json, SystemSettings.class);
+    }
+
+    // ---------- Credenziali provisionate ----------
+    public static String serializeProvisionedCredentials(ProvisionedCredentialStore store) {
+        return GSON.toJson(store, PROVISIONED_CREDENTIALS_TYPE);
+    }
+
+    public static ProvisionedCredentialStore deserializeProvisionedCredentials(String json) {
+        if (isBlank(json)) {
+            return new ProvisionedCredentialStore ();
+        }
+        ProvisionedCredentialStore store = GSON.fromJson(json, PROVISIONED_CREDENTIALS_TYPE);
+        return store == null ? new ProvisionedCredentialStore() : store;
     }
 
     private static boolean isBlank(String json) {
