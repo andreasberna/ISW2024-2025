@@ -10,9 +10,15 @@ public class AssignedShift {
     private TimeSlot slot;
 
     public AssignedShift(LocalDate date, String visitTypeId, TimeSlot slot) {
-        this.date = Objects.requireNonNull(date);
-        this.visitTypeId = Objects.requireNonNull(visitTypeId);
-        this.slot = Objects.requireNonNull(slot);
+        if (date == null) {
+            throw new NullPointerException("La data del turno non può essere nulla");
+        }
+        if (slot == null) {
+            throw new NullPointerException("La fascia oraria non può essere nulla");
+        }
+        this.date = date;
+        this.visitTypeId = requireNonBlank(visitTypeId, "L'identificativo del tipo visita non può essere nullo");
+        this.slot = slot;
     }
 
     public LocalDate getDate() {

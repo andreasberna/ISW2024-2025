@@ -7,27 +7,27 @@ public class Beneficiary {
     private String fullName;
 
     public Beneficiary(String username, String password, String fullName) {
-        this. username = requireNonBlank(username, "Lo username del fruitore non può essere vuoto");
-        this. username = requireNonBlank(username, "Lo username del fruitore non può essere vuoto");
+        this.username = requireNonBlank(username, "Lo username del fruitore non può essere vuoto");
+        this.password = requireNonBlank(password, "La password del fruitore non può essere vuota");
         this.fullName = requireNonBlank(fullName, "Il nome del fruitore non può essere vuoto");
     }
 
-    public Beneficiary(){
-        //costruttore per la (de)serializzazione
+    public Beneficiary() {
+        // costruttore per la (de)serializzazione
     }
 
     public String getUsername() {
         return username;
     }
     public void setUsername(String username) {
-        this. username = requireNonBlank(username, "Lo username del fruitore non può essere vuoto");
+        this.username = requireNonBlank(username, "Lo username del fruitore non può essere vuoto");
     }
 
     public String getPassword() {
         return password;
     }
     public void setPassword(String password) {
-        this. username = requireNonBlank(username, "Lo username del fruitore non può essere vuoto");
+        this.password = requireNonBlank(password, "La password del fruitore non può essere vuota");
     }
 
     public String getFullName() {
@@ -38,14 +38,14 @@ public class Beneficiary {
     }
 
     public boolean passwordMatches(String candidate){
-        if (candidate == null) return false;
-        return password.equals (candidate.trim ());
+        if (candidate == null || password == null) return false;
+        return password.equals(candidate.trim());
     }
 
     private String requireNonBlank(String value, String message){
-        if (value == null || value.isBlank ())
+        if (value == null || value.isBlank())
             throw new IllegalArgumentException(message);
-        return value.trim ();
+        return value.trim();
     }
 
 }

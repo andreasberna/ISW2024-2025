@@ -31,6 +31,11 @@ public class ConfiguratorCommandHandler {
     private static final DateTimeFormatter YEAR_MONTH_INPUT_FORMATTER = DateTimeFormatter.ofPattern("MM-yyyy");
     private static final DateTimeFormatter YEAR_MONTH_FORMATTER = DateTimeFormatter.ofPattern ("MM yyyy", Locale.ITALIAN);
 
+    private static final String CONFIGURATOR_ENTRY_HEADER = "Accesso configuratore";
+    private static final String CONFIGURATOR_FIRST_ACCESS_OPTION = "1 - Primo accesso configuratore";
+    private static final String CONFIGURATOR_LOGIN_OPTION = "2 - Accesso con credenziali personali";
+    private static final String CONFIGURATOR_LOGIN_UNAVAILABLE = "Nessun configuratore registrato. Eseguire il primo accesso.";
+
     private static final String CONFIGURATOR_LOGIN_HEADER = "Autenticazione configuratore";
     private static final String CONFIGURATOR_LOGIN_NICK_PROMPT = "Nickname configuratore (\"back\" per annullare): ";
     private static final String CONFIGURATOR_LOGIN_PASSWORD_PROMPT = "Password: ";
@@ -110,22 +115,72 @@ public class ConfiguratorCommandHandler {
     private static final String MAX_PEOPLE_SUCCESS = "Numero massimo di persone per iscrizione aggiornato.";
 
     private final ConfiguratorService service;
+    private final FirstAccessSetup firstAccessSetup;
     private final Printer printer;
     private final PromptReader reader;
 
     public ConfiguratorCommandHandler(ConfiguratorService service,
+                                      FirstAccessSetup firstAccessSetup,
                                       Printer printer,
                                       PromptReader reader) {
         this.service = Objects.requireNonNull(service);
+        this.firstAccessSetup = Objects.requireNonNull(firstAccessSetup);
         this.printer = Objects.requireNonNull(printer);
         this.reader = Objects.requireNonNull(reader);
     }
 
     public void startSession(){
-        if (!authenticateCOnfigurator()) return;
+        if (!prepareConfiguratorSession()) {
+            return;
+        }
 
         runConfiguratorMenu();
 
+    }
+
+    private boolean prepareConfiguratorSession() {
+        if (!service.hasPendingConfiguratorSeeds()) {
+            return authenticateCOnfigurator();
+        }
+
+        while (true) {
+            printer.println(MENU_SEPARATOR);
+            printer.println(CONFIGURATOR_ENTRY_HEADER);
+            printer.println(MENU_SEPARATOR);
+            printer.println(CONFIGURATOR_FIRST_ACCESS_OPTION);
+            printer.println(CONFIGURATOR_LOGIN_OPTION);
+            printer.println(CONFIGURATOR_MENU_BACK_OPTION);
+            printer.println(MENU_SEPARATOR);
+
+            String choice = reader.readLine(DEFAULT_PROMPT);
+            if (choice == null) {
+                printer.println(INVALID_COMMAND_MESSAGE);
+                continue;
+            }
+
+            String normalized = choice.trim().toLowerCase(Locale.ITALIAN);
+            switch (normalized) {
+                case "1", "first", "primo", "setup" -> {
+                    firstAccessSetup.run();
+                    if (!service.hasPendingConfiguratorSeeds()) {
+                        return authenticateCOnfigurator();
+                    }
+                }
+                case "2", "login", "normale" -> {
+                    if (service.listConfigurators().isEmpty()) {
+                        printer.println(ERROR_PREFIX + CONFIGURATOR_LOGIN_UNAVAILABLE);
+                        break;
+                    }
+                    return authenticateCOnfigurator();
+                }
+                case BACK_COMMAND -> {
+                    printer.println(OPERATION_ABORTED);
+                    return false;
+                }
+                default -> printer.println(INVALID_COMMAND_MESSAGE);
+            }
+        }
+        // In teoria non raggiungibile, ma richiesto dal compilatore.
     }
 
     private boolean authenticateCOnfigurator() {
@@ -181,7 +236,7 @@ public class ConfiguratorCommandHandler {
                 case "2", "list" -> openListMenu();
                 case "3", "settings" -> openSettingsMenu();
                 case "4", "planning" -> openPlanningMenu();
-                case BACK_COMMAND ->  stayInMenu = false;
+                case "logout" ->  stayInMenu = false;
                 default -> printer.println (INVALID_COMMAND_MESSAGE);
             }
         }

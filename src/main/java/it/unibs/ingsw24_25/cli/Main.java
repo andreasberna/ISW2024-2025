@@ -34,9 +34,8 @@ public class Main {
         PromptReader reader = new PromptReader (new Scanner (System.in));
 
         FirstAccessSetup setup = new FirstAccessSetup (service, volunteerService, reader, printer);
-        setup.run();
 
-        ConfiguratorCommandHandler configuratorHandler = new ConfiguratorCommandHandler (service, printer, reader);
+        ConfiguratorCommandHandler configuratorHandler = new ConfiguratorCommandHandler (service, setup, printer, reader);
         VolunteerCommandHandler volunteerHandler = new VolunteerCommandHandler (volunteerService, setup, printer, reader);
         BeneficiaryCommandHandler beneficiaryHandler = new BeneficiaryCommandHandler (beneficiaryService, printer, reader);
 

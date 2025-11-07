@@ -138,9 +138,9 @@ public class BeneficiaryCommandHandler {
         while (stay) {
             printer.println (MENU_SEPARATOR);
             printer.println ("Menu Visite");
-            printer.print ("1 - Visualizza visite proposte");
-            printer.print ("2 - Visualizza visite confermate");
-            printer.print ("back - Torna Indietro");
+            printer.println ("1 - Visualizza visite proposte");
+            printer.println ("2 - Visualizza visite confermate");
+            printer.println ("back - Torna Indietro");
             printer.println (MENU_SEPARATOR);
             String choice = reader.readLine (DEFAULT_PROMPT);
             if (choice == null){
@@ -162,10 +162,10 @@ public class BeneficiaryCommandHandler {
         while (stay) {
             printer.println (MENU_SEPARATOR);
             printer.println ("Menu Prenotazioni");
-            printer.print ("1 - Prenota visita proposta");
-            printer.print ("2 - Le mie prenotazioni");
-            printer.print ("3 - Annulla prenotazione");
-            printer.print ("back - Torna Indietro");
+            printer.println ("1 - Prenota visita proposta");
+            printer.println ("2 - Le mie prenotazioni");
+            printer.println ("3 - Annulla prenotazione");
+            printer.println ("back - Torna Indietro");
             printer.println (MENU_SEPARATOR);
             String choice = reader.readLine (DEFAULT_PROMPT);
             if (choice == null){

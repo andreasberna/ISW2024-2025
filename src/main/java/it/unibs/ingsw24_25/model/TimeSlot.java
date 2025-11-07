@@ -12,8 +12,8 @@ public class TimeSlot {
     private Duration duration;
 
     public TimeSlot(DayOfWeek day, LocalTime startTime, Duration duration) {
-        this.day = Objects.requireNonNull(day);
-        this.startTime = Objects.requireNonNull(startTime);
+        this.day = Objects.requireNonNull(day, "Il giorno non può essere nullo");
+        this.startTime = Objects.requireNonNull(startTime, "L'orario di inizio non può essere nullo");
         this.duration = requirePositiveDuration(duration);
     }
 
@@ -22,13 +22,13 @@ public class TimeSlot {
         return day;
     }
     public void setDay(DayOfWeek day) {
-        this.day = Objects.requireNonNull(day);
+        this.day = Objects.requireNonNull(day,  "Il giorno non può essere nullo");
     }
     public LocalTime getStartTime() {
         return startTime;
     }
     public void setStartTime(LocalTime startTime) {
-        this.startTime = Objects.requireNonNull(startTime);
+        this.startTime = Objects.requireNonNull(startTime, "L'orario di inizio non può essere nulla");
     }
     public Duration getDuration() {
         return duration;

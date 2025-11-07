@@ -132,7 +132,7 @@ public class VolunteerCliSupport {
         String beneficiary = booking.getBeneficiaryName () == null || booking.getBeneficiaryName ().isBlank ()
                 ? "-"
                 : booking.getBeneficiaryName ().trim ();
-        return " - Codice: %s | Prenotante: %s | Isceritti: %d".formatted (code, beneficiary, booking.getParticipants ());
+        return " - Codice: %s | Prenotante: %s | Iscritti: %d".formatted (code, beneficiary, booking.getParticipants ());
     }
 
     private static String formatConfirmedVisitSummary(int index, VisitOccurrenceDTO visit) {

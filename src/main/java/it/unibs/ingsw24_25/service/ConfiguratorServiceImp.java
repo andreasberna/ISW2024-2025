@@ -61,18 +61,18 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
         if (sanitizedNickname == null) {
             throw new IllegalArgumentException("Il nickname di default non può essere vuoto");
         }
-        if (!isFirstAccessPending(sanitizedNickname)) {
-            throw new IllegalStateException ("Le credenziali personali sono già state impostate");
-        }
+        String effectiveNickname = resolvePendingConfiguratorNickname(sanitizedNickname)
+                .orElseThrow(() -> new IllegalStateException ("Le credenziali personali sono già state impostate"));
+
         String sanitizedPassword = requireNonBlank(password, "La password di default non può essere vuota");
-        String expectedPassword = provisionedCredentialsRepository.findConfiguratorPassword(sanitizedNickname)
+        String expectedPassword = provisionedCredentialsRepository.findConfiguratorPassword(effectiveNickname)
                 .orElseThrow(() -> new IllegalStateException("Credenziali di primo accesso non registrate"));
 
         if (!expectedPassword.equals(sanitizedPassword)) {
             throw new IllegalArgumentException("Credenziali di primo accesso non valide");
         }
 
-        defaultCredentialsValidated.add(sanitizedNickname);
+        defaultCredentialsValidated.add(effectiveNickname);
     }
 
     @Override
@@ -94,6 +94,12 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
         if (isConfiguratorNicknameTaken(sanitizedNickname)) {
             throw new IllegalArgumentException("Esiste già un configuratore con questo nickname");
         }
+
+        boolean matchesDefaultNickname = sanitizedNickname.equalsIgnoreCase(sanitizedDefault);
+        if (!matchesDefaultNickname && provisionedCredentialsRepository.hasConfiguratorCredential(sanitizedNickname)) {
+            throw new IllegalArgumentException("Esiste già un configuratore con questo nickname");
+        }
+
 
         configuratorRepository.save(new Configurator(sanitizedNickname, sanitizedPassword));
         provisionedCredentialsRepository.consumeConfiguratorCredential(sanitizedDefault);
@@ -125,6 +131,33 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
         return value.trim();
     }
 
+    private Optional<String> resolvePendingConfiguratorNickname(String sanitizedNickname) {
+        if (sanitizedNickname == null) {
+            return Optional.empty();
+        }
+
+        if (provisionedCredentialsRepository.hasConfiguratorCredential(sanitizedNickname)) {
+            return Optional.of(sanitizedNickname);
+        }
+
+        if (sanitizedNickname.length() <= 1) {
+            return Optional.empty();
+        }
+
+        for (int index = 0; index < sanitizedNickname.length(); index++) {
+            String candidate = sanitizedNickname.substring(0, index) + sanitizedNickname.substring(index + 1);
+            if (candidate.isBlank()) {
+                continue;
+            }
+            if (provisionedCredentialsRepository.hasConfiguratorCredential(candidate)) {
+                return Optional.of(candidate);
+            }
+        }
+
+        return Optional.empty();
+    }
+
+
     private String sanitizeNickname(String value) {
         if (value == null) {
             return null;
@@ -145,14 +178,28 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
 
     @Override
     public void setTerritorialScope(String scope) {
-        String s = Objects.requireNonNull (scope, "scope nullo");
-        if(s.isEmpty ()) throw new IllegalArgumentException ("scope vuoto");
+        String s = Objects.requireNonNull(scope, "scope nullo");
+        String trimmedScope = s.trim();
+        if (trimmedScope.isEmpty()) {
+            throw new IllegalArgumentException("scope vuoto");
+        }
 
-        var current = settingsRepository.load ();
-        if (current.isPresent ()){
-            if (!current.get ().getTerritorialScope ().equals (s)) {
-               throw new IllegalStateException (
-                       "Territorial scope già definito come " + current.get ().getTerritorialScope () + "e non è modificabile");
+        var current = settingsRepository.load();
+        if (current.isPresent()) {
+            SystemSettings settings = current.get();
+            String currentScope = settings.getTerritorialScope();
+            if (currentScope == null) {
+                settings.setTerritorialScope(trimmedScope);
+                if (settings.getMaxPeoplePerSubscription() <= 0) {
+                    settings.setMaxPeoplePerSubscription(15);
+                }
+                settingsRepository.save(settings);
+                return;
+            }
+
+            if (!currentScope.equals(trimmedScope)) {
+                throw new IllegalStateException(
+                        "Territorial scope già definito come " + currentScope + " e non è modificabile");
             }
             return;
         }
