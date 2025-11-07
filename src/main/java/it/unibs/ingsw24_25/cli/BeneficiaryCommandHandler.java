@@ -50,16 +50,16 @@ public class BeneficiaryCommandHandler {
             }
             String normalized = choice.trim ().toLowerCase (Locale.ITALIAN);
             switch (normalized) {
-                case "1", "registrati" : register();
-                case "2", "accedi", "login" : {
+                case "1", "registrati" -> register();
+                case "2", "accedi", "login" -> {
                     if (authenticate()){
                         runBeneficiaryMenu();
                         activeUsername = null;
                         exit = true;
                     }
                 }
-                case "back" : exit = true;
-                default : printer.println (INVALID_COMMAND_MESSAGE);
+                case "back" -> exit = true;
+                default -> printer.println (INVALID_COMMAND_MESSAGE);
             }
         }
     }
@@ -114,9 +114,9 @@ public class BeneficiaryCommandHandler {
         while (stay) {
             printer.println (MENU_SEPARATOR);
             printer.println ("Menù fruitore");
-            printer.print ("1 - Visualizza visite");
-            printer.print ("2 - Gestisci prenotazioni");
-            printer.print ("logout");
+            printer.println ("1 - Visualizza visite");
+            printer.println ("2 - Gestisci prenotazioni");
+            printer.println ("logout");
             printer.println (MENU_SEPARATOR);
             String choice = reader.readLine (DEFAULT_PROMPT);
             if (choice == null){
@@ -125,10 +125,10 @@ public class BeneficiaryCommandHandler {
             }
             String normalized = choice.trim ().toLowerCase (Locale.ITALIAN);
             switch (normalized) {
-                case "1": runBeneficiaryVisitsMenu();
-                case "2": runBeneficiaryBookingMenu();
-                case "logout" : stay = false;
-                default : printer.println (INVALID_COMMAND_MESSAGE);
+                case "1" -> runBeneficiaryVisitsMenu();
+                case "2" -> runBeneficiaryBookingMenu();
+                case "logout" -> stay = false;
+                default -> printer.println (INVALID_COMMAND_MESSAGE);
             }
         }
     }
@@ -149,10 +149,10 @@ public class BeneficiaryCommandHandler {
             }
             String normalized = choice.trim ().toLowerCase (Locale.ITALIAN);
             switch (normalized) {
-                case "1", "proposte" : displayVisits(VisitStatus.PROPOSED);
-                case "2", "confermate" : displayVisits(VisitStatus.CONFIRMED);
-                case "back" : stay = false;
-                default : printer.println (INVALID_COMMAND_MESSAGE);
+                case "1", "proposte" -> displayVisits(VisitStatus.PROPOSED);
+                case "2", "confermate" -> displayVisits(VisitStatus.CONFIRMED);
+                case "back" -> stay = false;
+                default -> printer.println (INVALID_COMMAND_MESSAGE);
             }
         }
     }
@@ -174,11 +174,11 @@ public class BeneficiaryCommandHandler {
             }
             String normalized = choice.trim ().toLowerCase (Locale.ITALIAN);
             switch (normalized) {
-                case "1", "prenota" : bookVisitFlow();
-                case "2" : displayBookings();
-                case "3", "cancel" : cancelBooking();
-                case "back" : stay = false;
-                default : printer.println (INVALID_COMMAND_MESSAGE);
+                case "1", "prenota" -> bookVisitFlow();
+                case "2" -> displayBookings();
+                case "3", "cancel" -> cancelBooking();
+                case "back" -> stay = false;
+                default -> printer.println (INVALID_COMMAND_MESSAGE);
             }
         }
     }
