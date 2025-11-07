@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
+
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -218,7 +218,13 @@ class ConfiguratorServiceImpTest {
             SystemSettings settings = new SystemSettings("scope", 5, new ArrayList<>());
             when(settingsRepository.load()).thenReturn(Optional.of(settings));
 
-            service.setBlackoutDates(List.of(day2, null, day1, duplicate));
+            List<LocalDate> inputDates = new ArrayList<>();
+            inputDates.add(day2);
+            inputDates.add(null);
+            inputDates.add(day1);
+            inputDates.add(duplicate);
+
+            service.setBlackoutDates(inputDates);
 
             ArgumentCaptor<SystemSettings> captor = ArgumentCaptor.forClass(SystemSettings.class);
             verify(settingsRepository).save(captor.capture());
@@ -354,18 +360,9 @@ class ConfiguratorServiceImpTest {
         @Test
         void linkVolunteerToVisitCreatesBidirectionalRelation() {
             Volunteer volunteer = new Volunteer("alice");
-            AtomicReference<List<Volunteer>> guidesRef = new AtomicReference<>();
+
             VisitType visitType = mock(VisitType.class);
-            when(visitType.getVisitTitle()).thenReturn("Visita");
-            when(visitType.getGuides()).thenAnswer(invocation -> guidesRef.get());
-            doAnswer(invocation -> {
-                guidesRef.set(invocation.getArgument(0));
-                return null;
-            }).when(visitType).setGuides(any());
-            doAnswer(invocation -> {
-                guidesRef.get().add(invocation.getArgument(0));
-                return null;
-            }).when(visitType).addGuide(any());
+            when(visitType.getGuides()).thenReturn(new ArrayList<>());
 
             when(volunteerRepository.findByNickname("alice")).thenReturn(Optional.of(volunteer));
             when(visitTypeRepository.findById("Visita")).thenReturn(Optional.of(visitType));
@@ -373,7 +370,7 @@ class ConfiguratorServiceImpTest {
             service.linkVOlunteerToVisit("alice", "Visita");
 
             assertThat(volunteer.getVisitsAttending()).containsExactly(visitType);
-            assertThat(guidesRef.get()).containsExactly(volunteer);
+            verify (visitType).addGuide (volunteer);
             verify(volunteerRepository).save(volunteer);
             verify(visitTypeRepository).save(visitType);
         }
