@@ -274,8 +274,6 @@ class ConfiguratorServiceImpTest {
         void addVisitTypeCreatesLinkWithPlace() {
             Place place = new Place("Museo", "descrizione", "Brescia");
             when(placeRepository.findById("Museo")).thenReturn(Optional.of(place));
-            when(visitTypeRepository.findById("Visita"))
-                    .thenReturn(Optional.empty());
             List<TimeSlot> schedules = List.of(new TimeSlot(DayOfWeek.MONDAY, LocalTime.of(10, 0), Duration.ofHours(2)));
 
             try (MockedConstruction<VisitType> mocked = mockConstruction(VisitType.class, (mockVisit, context) -> {

@@ -187,7 +187,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
         if (place.getVisits () == null) place.setVisits (new ArrayList<> ());
         place.addVisit (visitType);
         placeRepository.save(place);
-        return "Visita inserita: %s (ID: %s)".formatted (title, visitType.getId ()) ;
+        return "Visita inserita: %s".formatted(title);
     }
 
     @Override
