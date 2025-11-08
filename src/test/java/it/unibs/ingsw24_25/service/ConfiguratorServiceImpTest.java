@@ -9,11 +9,7 @@ import it.unibs.ingsw24_25.model.SystemSettings;
 import it.unibs.ingsw24_25.model.TimeSlot;
 import it.unibs.ingsw24_25.model.VisitType;
 import it.unibs.ingsw24_25.model.Volunteer;
-import it.unibs.ingsw24_25.repository.ConfiguratorRepository;
-import it.unibs.ingsw24_25.repository.PlaceRepository;
-import it.unibs.ingsw24_25.repository.SettingsRepository;
-import it.unibs.ingsw24_25.repository.VisitTypeRepository;
-import it.unibs.ingsw24_25.repository.VolunteerRepository;
+import it.unibs.ingsw24_25.repository.*;
 import it.unibs.ingsw24_25.util.ExcludedDatePolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -58,8 +54,11 @@ class ConfiguratorServiceImpTest {
     private SettingsRepository settingsRepository;
     @Mock
     private ConfiguratorRepository configuratorRepository;
+    @Mock
+    private MonthlyVisitPlanRepository  monthlyVisitPlanRepository;
 
     private ConfiguratorServiceImp service;
+    private VolunteerService volunteerService;
 
     @BeforeEach
     void setUp() {
@@ -68,7 +67,9 @@ class ConfiguratorServiceImpTest {
                 visitTypeRepository,
                 volunteerRepository,
                 settingsRepository,
-                configuratorRepository
+                monthlyVisitPlanRepository,
+                configuratorRepository,
+                volunteerService
         );
     }
 
