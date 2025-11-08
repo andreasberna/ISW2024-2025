@@ -97,9 +97,6 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <!-- FQCN della tua Main -->
-                            <mainClass>it.unibs.ingsw24_25.cli.Main</mainClass>
-
                             <!-- Nome file risultante -->
                             <finalName>tour-guide-planner-v1.0-all</finalName>
 
