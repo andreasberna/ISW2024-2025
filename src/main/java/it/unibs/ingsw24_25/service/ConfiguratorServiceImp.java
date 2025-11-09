@@ -227,11 +227,14 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
 
     @Override
     public String addPlace(String name, String description, String location) {
-        ensureCatalogChangeWindowAvailable();
         if (name == null || name.isBlank())
             throw new IllegalArgumentException ("Il nome del luogo non può essere nullo");
 
-        if (placeRepository.findById (name).isPresent())
+        Optional<Place> existingPlace = placeRepository.findById(name);
+
+        ensureCatalogChangeWindowAvailable();
+
+        if (existingPlace.isPresent())
             throw new IllegalArgumentException ("Un luogo con questo nome esiste già");
 
         Place place = new Place(name, description, location);
@@ -242,7 +245,6 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
 
     @Override
     public String addVisitType(String placeID, String title, String description, String meetLocation, List<TimeSlot> schedules, boolean ticketRequired, int minParticipants, int maxParticipants, LocalDate validFrom, LocalDate validTo) {
-        ensureCatalogChangeWindowAvailable();
         if(placeID == null || placeID.isBlank())
             throw  new IllegalArgumentException ("Identificativo luogo non valido");
 
@@ -252,11 +254,17 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
         if(minParticipants <= 0 || maxParticipants <= 0 || minParticipants > maxParticipants)
             throw new  IllegalArgumentException ("Numero partecipanti non valido");
 
+        Optional<Place> maybePlace = placeRepository.findById(placeID);
+        Optional<VisitType> duplicateById = visitTypeRepository.findById(title);
+        List<VisitType> existingVisits = Optional.ofNullable(visitTypeRepository.findAll()).orElse(List.of());
+
+        ensureCatalogChangeWindowAvailable();
         ensureCatalogAdditionCompatible(validFrom);
 
-        Place place = placeRepository.findById (placeID)
-                .orElseThrow (() -> new IllegalArgumentException ("Luogo non trovato"));
-        List<VisitType> existingVisits = Optional.ofNullable(visitTypeRepository.findAll ()).orElse (List.of());
+        Place place = maybePlace.orElseThrow(() -> new IllegalArgumentException("Luogo non trovato"));
+        if (duplicateById.isPresent()) {
+            throw new IllegalArgumentException("Esiste già una visita con questo identificativo");
+        }
         boolean duplicateTitle = existingVisits.stream ()
                 .filter (Objects::nonNull)
                 .anyMatch (existing -> existing.getVisitTitle () != null

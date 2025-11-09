@@ -21,7 +21,7 @@ public class VisitType {
     private List<Volunteer> guides;
     private VisitState state;
     private LocalDate visitDate;
-    private LocalDate enrollmentDeadline;
+    private LocalDate enrollmentDeadline= visitDate.minusDays(3);
     private int enrolled;
 
     public VisitType(String visitTitle, String visitDescription, String visitMeetLocation,
@@ -90,10 +90,27 @@ public class VisitType {
     }
 
     public void updateState(LocalDate today){
-        if (visitDate == null){return;}
+        if (today == null){
+            throw new IllegalArgumentException("La data odierna non può essere nulla");
+        }
 
-        LocalDate deadline = enrollmentDeadline != null ? enrollmentDeadline : visitDate.minusDays (3);
+        if (state == null){
+            state = VisitState.PROPOSTA;
+        }
 
+        LocalDate visitDay = this.visitDate;
+        if (visitDay == null && enrollmentDeadline == null) {
+            return;
+        }
+
+        LocalDate deadline = enrollmentDeadline;
+        if (deadline == null) {
+            deadline = computeEnrollmentDeadline(visitDay);
+            if (deadline == null) {
+                return;
+            }
+            this.enrollmentDeadline = deadline;
+        }
         switch (state) {
             case PROPOSTA -> {
                 if(enrolled == maxParticipants) state = VisitState.COMPLETA;
@@ -111,7 +128,7 @@ public class VisitType {
                 }
             }
             case CONFERMATA -> {
-                if (!today.isEqual (visitDate)) state = VisitState.EFFETTUATA;
+                if (visitDay == null || !today.isEqual (visitDay)) state = VisitState.EFFETTUATA;
             }
 
         }
@@ -249,19 +266,7 @@ public class VisitType {
     public void setGuides(List<Volunteer> guides) {
         this.guides = guides == null ? new ArrayList<> () : new ArrayList<>(guides);
     }
-    public LocalDate getVisitDate() {
-        return visitDate;
-    }
-    public void setVisitDate(LocalDate visitDate) {
-        this.visitDate = visitDate;
-        this.enrollmentDeadline = visitDate == null ? null : visitDate.minusDays(3);
-    }
-    public LocalDate getEnrollmentDeadline() {
-        return enrollmentDeadline;
-    }
-    public void setEnrollmentDeadline(LocalDate enrollmentDeadline) {
-        this.enrollmentDeadline = enrollmentDeadline;
-    }
+
     public VisitState getState() {
         return state;
     }
@@ -279,6 +284,13 @@ public class VisitType {
         if (guides == null) {
             guides = new ArrayList<>();
         }
+    }
+
+    private LocalDate computeEnrollmentDeadline(LocalDate baseDate) {
+        if (baseDate == null) {
+            return null;
+        }
+        return baseDate.minusDays(3);
     }
 
     private String sanitizeId(String candidate) {
