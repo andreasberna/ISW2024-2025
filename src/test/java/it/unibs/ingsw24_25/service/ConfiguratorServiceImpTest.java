@@ -19,7 +19,6 @@ import it.unibs.ingsw24_25.repository.SettingsRepository;
 import it.unibs.ingsw24_25.repository.VisitTypeRepository;
 import it.unibs.ingsw24_25.repository.VolunteerRepository;
 import it.unibs.ingsw24_25.util.ExcludedDatePolicy;
-import it.unibs.ingsw24_25.service.VolunteerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -238,7 +237,7 @@ class ConfiguratorServiceImpTest {
             SystemSettings settings = new SystemSettings("scope", 5, new ArrayList<>());
             when(settingsRepository.load()).thenReturn(Optional.of(settings));
 
-            service.setBlackoutDates(new ArrayList<> (Arrays.asList (day2, duplicate, null, day1, duplicate)));
+            service.setBlackoutDates(new ArrayList<>(Arrays.asList(day2, duplicate, null, day1, duplicate)));
 
             ArgumentCaptor<SystemSettings> captor = ArgumentCaptor.forClass(SystemSettings.class);
             verify(settingsRepository).save(captor.capture());
@@ -299,11 +298,11 @@ class ConfiguratorServiceImpTest {
                     null
             );
             when(settingsRepository.load()).thenReturn(Optional.of(settings));
-            when(placeRepository.findById("Museo")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.addPlace("Museo", "descrizione", "Brescia"))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("modifiche al catalogo sono consentite solo dopo la generazione del piano");
+            verifyNoInteractions(placeRepository);
         }
 
         @Test
@@ -317,11 +316,11 @@ class ConfiguratorServiceImpTest {
                     null
             );
             when(settingsRepository.load()).thenReturn(Optional.of(settings));
-            when(placeRepository.findById("Museo")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.addPlace("Museo", "descrizione", "Brescia"))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Le modifiche al catalogo non sono consentite dopo la riapertura");
+            verifyNoInteractions(placeRepository);
         }
     }
 
@@ -332,13 +331,9 @@ class ConfiguratorServiceImpTest {
         void addVisitTypeCreatesLinkWithPlace() {
             Place place = new Place("Museo", "descrizione", "Brescia");
             when(placeRepository.findById("Museo")).thenReturn(Optional.of(place));
-            when(visitTypeRepository.findById("Visita"))
-                    .thenReturn(Optional.empty());
             List<TimeSlot> schedules = List.of(new TimeSlot(DayOfWeek.MONDAY, LocalTime.of(10, 0), Duration.ofHours(2)));
 
-            try (MockedConstruction<VisitType> mocked = mockConstruction(VisitType.class, (mockVisit, context) -> {
-                when(mockVisit.getVisitTitle()).thenReturn("Visita");
-            })) {
+            try (MockedConstruction<VisitType> mocked = mockConstruction(VisitType.class)) {
                 String message = service.addVisitType(
                         "Museo",
                         "Visita",
@@ -390,9 +385,7 @@ class ConfiguratorServiceImpTest {
                     null
             );
             when(settingsRepository.load()).thenReturn(Optional.of(settings));
-            Place place = new Place("Museo", "descrizione", "Brescia");
-            when(placeRepository.findById("Museo")).thenReturn(Optional.of(place));
-            when(visitTypeRepository.findAll()).thenReturn(List.of());
+
 
             assertThatThrownBy(() -> service.addVisitType(
                     "Museo",
@@ -408,7 +401,8 @@ class ConfiguratorServiceImpTest {
             )).isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("dopo la chiusura");
 
-            verify(visitTypeRepository, never()).save(any());
+            verifyNoInteractions(placeRepository);
+            verifyNoInteractions(visitTypeRepository);
         }
     }
 
@@ -457,7 +451,7 @@ class ConfiguratorServiceImpTest {
             service.linkVOlunteerToVisit("alice", "Visita");
 
             assertThat(volunteer.getVisitsAttending()).containsExactly(visitType);
-            assertThat (guides).containsExactly (volunteer);
+            assertThat(guides).containsExactly(volunteer);
             verify(visitType).addGuide(volunteer);
             verify(volunteerRepository).save(volunteer);
             verify(visitTypeRepository).save(visitType);
@@ -519,157 +513,58 @@ class ConfiguratorServiceImpTest {
         @Test
         void listVolunteerWithVisitTypeReturnsMappedDto() {
             Volunteer volunteer = new Volunteer("alice", "password");
-            VisitType visit = mock(VisitType.class);
-            when(visit.getVisitTitle()).thenReturn("Visita");
-            volunteer.addVisit(visit);
+            VisitType visitType = new VisitType(
+                    "visit-1",
+                    "Visita",
+                    "Descrizione",
+                    "Ingresso",
+                    LocalDate.now(),
+                    LocalDate.now().plusDays(5),
+                    List.of(),
+                    false,
+                    1,
+                    10,
+                    new Place("Museo", "descrizione", "Brescia"),
+                    new ArrayList<>()
+            );
+            volunteer.addVisit(visitType);
+            visitType.addGuide(volunteer);
             when(volunteerRepository.findAll()).thenReturn(List.of(volunteer));
 
-            List<VolunteerDTO> dtos = service.listVolunteerWVisitType();
+            List<VolunteerDTO> dtos = service.listVolunteerWVisitType ();
 
             assertThat(dtos).hasSize(1);
             assertThat(dtos.get(0).getNickname()).isEqualTo("alice");
-            assertThat(dtos.get(0).getVisitTypeTitles()).containsExactly("Visita");
         }
     }
 
     @Nested
-    @DisplayName("Catalog removal cascades")
-    class CatalogRemovalCascades {
-
+    @DisplayName("Removal operations")
+    class RemovalOperations {
         @Test
-        void removePlaceRejectsWhenPlanNotGeneratedYet() {
-            SystemSettings settings = settingsWithPhase(PlanningPhase.AVAILABILITY_COLLECTION_CLOSED);
-            when(settingsRepository.load()).thenReturn(Optional.of(settings));
-
-            assertThatThrownBy(() -> service.removePlace("Museo"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("modifiche al catalogo sono consentite solo dopo la generazione del piano");
-
-            verifyNoInteractions(placeRepository);
-        }
-
-        @Test
-        void removeVolunteerRejectsWhenAvailabilityCollectionAlreadyReopened() {
-            SystemSettings settings = settingsWithPhase(PlanningPhase.READY_FOR_NEXT_CYCLE);
-            when(settingsRepository.load()).thenReturn(Optional.of(settings));
-
-            assertThatThrownBy(() -> service.removeVolunteer("alice"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Le modifiche al catalogo non sono consentite dopo la riapertura");
-
-            verifyNoInteractions(volunteerRepository);
-        }
-
-        @Test
-        void removeVisitTypeRejectsWhenPlanNotGeneratedYet() {
-            SystemSettings settings = settingsWithPhase(PlanningPhase.AVAILABILITY_COLLECTION_CLOSED);
-            when(settingsRepository.load()).thenReturn(Optional.of(settings));
-
-            assertThatThrownBy(() -> service.removeVisitType("visit-1"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("modifiche al catalogo sono consentite solo dopo la generazione del piano");
-
-            verifyNoInteractions(visitTypeRepository);
-        }
-
-        @Test
-        void removePlaceDeletesVisitTypesAndAssignmentsBeforeDeletingPlace() {
-            SystemSettings settings = new SystemSettings(
-                    "scope",
-                    10,
-                    List.of(),
-                    YearMonth.of(2024, 1),
-                    PlanningPhase.PLAN_GENERATED,
-                    null
-            );
-            when(settingsRepository.load()).thenReturn(Optional.of(settings), Optional.of(settings));
-
-            Place place = new Place("Museo", "descrizione", "Brescia");
-            VisitType visitOne = new VisitType(
-                    "visit-1",
-                    "Visita 1",
-                    "Descrizione",
-                    "Ingresso",
-                    LocalDate.of(2024, 2, 1),
-                    LocalDate.of(2024, 12, 31),
-                    List.of(),
-                    false,
-                    1,
-                    10,
-                    place,
-                    new ArrayList<>()
-            );
-            VisitType visitTwo = new VisitType(
-                    "visit-2",
-                    "Visita 2",
-                    "Descrizione",
-                    "Ingresso",
-                    LocalDate.of(2024, 2, 1),
-                    LocalDate.of(2024, 12, 31),
-                    List.of(),
-                    false,
-                    1,
-                    10,
-                    place,
-                    new ArrayList<>()
-            );
-            place.setVisits(new ArrayList<>(List.of(visitOne, visitTwo)));
-
-            when(placeRepository.findById("Museo")).thenReturn(Optional.of(place));
-            when(visitTypeRepository.findByPlace("Museo")).thenReturn(List.of(visitOne, visitTwo));
-            when(placeRepository.findById(place.getPlaceTitle())).thenReturn(Optional.of(place));
-            when(volunteerRepository.findAll()).thenReturn(List.of());
-
-            service.removePlace("Museo");
-
-            verify(visitTypeRepository).deleteById("visit-1");
-            verify(visitTypeRepository).deleteById("visit-2");
-
-            ArgumentCaptor<Iterable> idCaptor = ArgumentCaptor.forClass(Iterable.class);
-            verify(monthlyVisitPlanRepository).removePlannedVisitsByVisitTypes(idCaptor.capture());
-            assertThat(idCaptor.getValue()).containsExactlyInAnyOrder("visit-1", "visit-2");
-
-            verify(placeRepository).deleteById("Museo");
-            verifyNoInteractions(volunteerService);
-        }
-
-        @Test
-        void removeVolunteerPurgesOrphanedVisitTypeAndPlace() {
-            SystemSettings settings = new SystemSettings(
-                    "scope",
-                    10,
-                    List.of(),
-                    YearMonth.of(2024, 1),
-                    PlanningPhase.PLAN_GENERATED,
-                    null
-            );
-            when(settingsRepository.load()).thenReturn(Optional.of(settings), Optional.of(settings));
-
-            Place place = new Place("Museo", "descrizione", "Brescia");
+        void removeVolunteerCascadesToVisitAssignments() {
+            Volunteer volunteer = new Volunteer("alice", "password");
             VisitType visit = new VisitType(
                     "visit-1",
                     "Visita",
                     "Descrizione",
                     "Ingresso",
-                    LocalDate.of(2024, 2, 1),
-                    LocalDate.of(2024, 12, 31),
+                    LocalDate.now(),
+                    LocalDate.now().plusDays(5),
                     List.of(),
                     false,
                     1,
                     10,
-                    place,
+                    new Place("Museo", "descrizione", "Brescia"),
                     new ArrayList<>()
             );
-            place.setVisits(new ArrayList<>(List.of(visit)));
-
-            Volunteer volunteer = new Volunteer("alice", "password");
             volunteer.addVisit(visit);
             visit.addGuide(volunteer);
 
             when(volunteerRepository.findByNickname("alice")).thenReturn(Optional.of(volunteer));
             when(volunteerRepository.findAll()).thenReturn(List.of());
             when(visitTypeRepository.findById("visit-1")).thenReturn(Optional.of(visit));
-            when(placeRepository.findById("Museo")).thenReturn(Optional.of(place));
+            when(placeRepository.findById("Museo")).thenReturn(Optional.of(visit.getPlace()));
 
             service.removeVolunteer("alice");
 

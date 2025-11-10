@@ -21,7 +21,7 @@ public class VisitType {
     private List<Volunteer> guides;
     private VisitState state;
     private LocalDate visitDate;
-    private LocalDate enrollmentDeadline= visitDate.minusDays(3);
+    private LocalDate enrollmentDeadline;
     private int enrolled;
 
     public VisitType(String visitTitle, String visitDescription, String visitMeetLocation,
@@ -255,6 +255,32 @@ public class VisitType {
     public int getEnrolled() {
         return enrolled;
     }
+
+    public LocalDate getVisitDate() {
+        return visitDate;
+    }
+
+    public void setVisitDate(LocalDate visitDate) {
+        this.visitDate = visitDate;
+        if (visitDate == null) {
+            this.enrollmentDeadline = null;
+        } else if (enrollmentDeadline == null || !enrollmentDeadline.isEqual(visitDate.minusDays(3))) {
+            this.enrollmentDeadline = computeEnrollmentDeadline(visitDate);
+        }
+    }
+
+    public LocalDate getEnrollmentDeadline() {
+        if (enrollmentDeadline == null) {
+            enrollmentDeadline = computeEnrollmentDeadline(visitDate);
+        }
+        return enrollmentDeadline;
+    }
+
+    public LocalDate computeEnrollmentDeadline(LocalDate visitDate) {
+        Objects.requireNonNull(visitDate, "La data della visita non può essere nulla");
+        return visitDate.minusDays(3);
+    }
+
 
     private void ensureSchedulesInitialized() {
         if (schedules == null) {
