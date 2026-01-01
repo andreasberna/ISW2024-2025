@@ -7,6 +7,19 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class VisitType {
+    private static final Map<VisitState, VisitStateBehavior> STATE_BEHAVIORS;
+
+    static {
+        Map<VisitState, VisitStateBehavior> behaviors = new EnumMap<>(VisitState.class);
+        behaviors.put(VisitState.PROPOSTA, new PropostaState());
+        behaviors.put(VisitState.COMPLETA, new CompletaState());
+        behaviors.put(VisitState.CONFERMATA, new ConfermataState());
+        behaviors.put(VisitState.CANCELLATA, new CancellataState());
+        behaviors.put(VisitState.EFFETTUATA, new EffettuataState());
+        // Beneficio: nuovo stato = nuova classe, senza modificare VisitType.
+        STATE_BEHAVIORS = Collections.unmodifiableMap(behaviors);
+    }
+
     private String id;
     private String visitTitle;
     private String visitDescription;
@@ -20,6 +33,7 @@ public class VisitType {
     private Place place;
     private List<Volunteer> guides;
     private VisitState state;
+    private VisitStateBehavior stateBehavior;
     private LocalDate visitDate;
     private LocalDate enrollmentDeadline= visitDate.minusDays(3);
     private int enrolled;
@@ -95,7 +109,9 @@ public class VisitType {
         }
 
         if (state == null){
-            state = VisitState.PROPOSTA;
+            setStateInternal (VisitState.PROPOSTA);
+        } else if (stateBehavior == null) {
+            stateBehavior = behaviorForState (state);
         }
 
         LocalDate visitDay = this.visitDate;
@@ -111,26 +127,10 @@ public class VisitType {
             }
             this.enrollmentDeadline = deadline;
         }
-        switch (state) {
-            case PROPOSTA -> {
-                if(enrolled == maxParticipants) state = VisitState.COMPLETA;
-                else if(today.isEqual (deadline)){
-                    if (enrolled >= minParticipants) state = VisitState.CONFERMATA;
-                    else state = VisitState.CANCELLATA;
-                }
-            }
-            case COMPLETA -> {
-                if(enrolled < minParticipants & today.isBefore (deadline))
-                    state = VisitState.PROPOSTA;
-                else if(today.isEqual (deadline)){
-                    if (enrolled >= minParticipants) state = VisitState.CONFERMATA;
-                    else state = VisitState.CANCELLATA;
-                }
-            }
-            case CONFERMATA -> {
-                if (visitDay == null || !today.isEqual (visitDay)) state = VisitState.EFFETTUATA;
-            }
 
+        VisitState nextState = stateBehavior.nextState (this, today);
+        if (nextState != null && nextState != state) {
+            setStateInternal (nextState);
         }
     }
 
@@ -270,6 +270,9 @@ public class VisitType {
     public VisitState getState() {
         return state;
     }
+    public void setState(VisitState state) {
+        setStateInternal (state);
+    }
     public int getEnrolled() {
         return enrolled;
     }
@@ -300,4 +303,27 @@ public class VisitType {
         return candidate.trim();
     }
 
+    LocalDate getVisitDate() {
+        return visitDate;
+    }
+
+    LocalDate getEnrollmentDeadline() {
+        return enrollmentDeadline;
+    }
+
+    void setEnrollmentDeadline(LocalDate enrollmentDeadline) {
+        this.enrollmentDeadline = enrollmentDeadline;
+    }
+
+    private void setStateInternal(VisitState state) {
+        this.state = state;
+        this.stateBehavior = behaviorForState(state);
+    }
+
+    private VisitStateBehavior behaviorForState(VisitState state) {
+        if (state == null) {
+            return null;
+        }
+        return STATE_BEHAVIORS.get(state);
+    }
 }
