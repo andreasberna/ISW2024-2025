@@ -5,27 +5,23 @@ import java.time.YearMonth;
 import java.util.Objects;
 
 public final class AvailabilitySubmissionPolicy {
+    private static final AvailabilitySubmissionStrategy DEFAULT_STRATEGY =
+            new StandardAvailabilitySubmissionStrategy();
+    private static AvailabilitySubmissionStrategy strategy = DEFAULT_STRATEGY;
     private AvailabilitySubmissionPolicy() {
     }
 
     public static boolean isWindowOpen(YearMonth referenceMonth, LocalDate today) {
-        Objects.requireNonNull(referenceMonth, "referenceMonth non può essere nullo");
-        Objects.requireNonNull(today, "today non può essere nullo");
-
-        YearMonth submissionMonth = referenceMonth.minusMonths (1);
-        LocalDate windowStart = submissionMonth.atDay (1);
-        LocalDate deadline = submissionMonth.atDay (15);
-
-        if (today.isBefore (windowStart)) {
-            return false;
-        }
-
-        return !today.isAfter(deadline);
+        return strategy.isWindowOpen(referenceMonth, today);
     }
 
     public static YearMonth nextSubmissionMonth(LocalDate today) {
-        Objects.requireNonNull(today, "today non può essere nullo");
-        LocalDate firstDayNextMonth = today.plusMonths(1).withDayOfMonth(1);
-        return YearMonth.from(firstDayNextMonth);
+        return strategy.nextSubmissionMonth(today);
+    }
+    public static void setStrategy(AvailabilitySubmissionStrategy newStrategy) {
+        strategy = Objects.requireNonNull(newStrategy, "strategy non può essere nullo");
+    }
+    public static void resetStrategy() {
+        strategy = DEFAULT_STRATEGY;
     }
 }
