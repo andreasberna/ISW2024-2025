@@ -1,8 +1,6 @@
 package it.unibs.ingsw24_25.cli;
 
-import it.unibs.ingsw24_25.service.ConfiguratorService;
-import it.unibs.ingsw24_25.service.ConfiguratorServiceImp;
-import it.unibs.ingsw24_25.service.VolunteerService;
+import it.unibs.ingsw24_25.service.FirstAccessService;
 
 import java.util.Objects;
 
@@ -23,162 +21,146 @@ public class FirstAccessSetup {
     private static final String VOLUNTEER_FIRST_ACCESS_HEADER = "Primo accesso volontario";
     private static final String VOLUNTEER_DEFAULT_PASSWORD_PROMPT = "Inserisci la password temporanea (\"back\" per annullare):";
     private static final String VOLUNTEER_NEW_NICKNAME_PROMPT = "Imposta un nuovo nickname personale: ";
-    private static final String VOLUNTEER_INVALID_NICKNAME = "Il nickname non può essere vuoto.";
-    private static final String VOLUNTEER_NICKNAME_UNCHANGED = "Il nuovo nickname deve essere diverso da quello assegnato dal sistema.";
     private static final String VOLUNTEER_NEW_PASSWORD_PROMPT = "Imposta una nuova password: ";
     private static final String VOLUNTEER_CONFIRM_PASSWORD_PROMPT = "Conferma la nuova password: ";
     private static final String VOLUNTEER_PASSWORD_MISMATCH = "Le password non coincidono.";
     private static final String VOLUNTEER_FIRST_ACCESS_SUCCESS = "Credenziali personali impostate con successo. Nuovo nickname: %s.";
     private static final String OPERATION_ABORTED = "Operazione annullata.";
 
-    private final ConfiguratorService service;
-    private final VolunteerService volunteerService;
+    private final FirstAccessService firstAccessService;
     private final PromptReader reader;
     private final Printer printer;
 
-    public FirstAccessSetup(ConfiguratorService service,
-                            VolunteerService volunteerService,
+    public FirstAccessSetup(FirstAccessService firstAccessService,
                             PromptReader reader, Printer printer) {
-        this.service = Objects.requireNonNull(service, "Service non può essere nullo");
-        this.volunteerService = Objects.requireNonNull (volunteerService);
+        this.firstAccessService = Objects.requireNonNull(firstAccessService, "service non può essere nullo");
         this.reader = Objects.requireNonNull(reader, "Reader non può essere nulla");
         this.printer = Objects.requireNonNull(printer, "Printer non può essere nulla");
     }
 
     public void run(){
-        if (!service.hasPendingConfiguratorSeeds ()) return;
-
-        printer.println(MENU_SEPARATOR);
-        printer.println(INTRO_MESSAGE);
-        printer.println(MENU_SEPARATOR);
-
-        String defaultNickname = verifyDefaultCredentials ();
-        setPersonalCredentials(defaultNickname);
-        configureTerritorialScope();
-        configureMaxParticipants();
-
-        printer.println (MENU_SEPARATOR);
-        printer.println (COMPLETION_MESSAGE);
-        printer.println (MENU_SEPARATOR);
+        firstAccessService.runConfiguratorFirstAccess (buildConfiguratorView());
     }
 
     public String handleVolunteerFirstAccess(String nickname){
-        Objects.requireNonNull (nickname, "Il nickname non può essere nullo");
-        String currentNickname = nickname.trim ();
-        if (currentNickname.isEmpty ())
-            throw new IllegalArgumentException ("Il nickname non può essere vuoto");
+       return firstAccessService.runVolunteerFirstAccess (nickname, buildVolunteerView());
+    }
 
-
-        printer.println (MENU_SEPARATOR);
-        printer.println (VOLUNTEER_FIRST_ACCESS_HEADER);
-        printer.println (MENU_SEPARATOR);
-
-        while (true) {
-            String defaultPassword = reader.readLine (VOLUNTEER_DEFAULT_PASSWORD_PROMPT);
-            if (defaultPassword == null){
-                printer.println(OPERATION_ABORTED);
-                return null;
-            }
-            try {
-                volunteerService.verifyDefaultCredentials (currentNickname, defaultPassword);
-                break;
-            } catch (IllegalArgumentException |  IllegalStateException ex ) {
-                printer.println (ERROR_PREFIX + safeMessage (ex));
-            }
-        }
-
-        while (true) {
-            String newNickname = reader.readLine (VOLUNTEER_NEW_NICKNAME_PROMPT);
-            if (newNickname == null) return null;
-
-            String newPassword = reader.readLine (VOLUNTEER_NEW_PASSWORD_PROMPT);
-            if (newPassword == null) return null;
-
-            String confirmation = reader.readLine (VOLUNTEER_CONFIRM_PASSWORD_PROMPT);
-            if (confirmation == null) return null;
-
-            if (!Objects.equals(newPassword, confirmation)) {
-                printer.println (ERROR_PREFIX + VOLUNTEER_PASSWORD_MISMATCH);
-                continue;
+    private FirstAccessService.ConfiguratorFirstAccessView buildConfiguratorView(){
+        return new FirstAccessService.ConfiguratorFirstAccessView () {
+            @Override
+            public void showSeparator() {
+                printer.print(MENU_SEPARATOR);
             }
 
-            try {
-                volunteerService.setPersonalCredentials (currentNickname, newNickname, newPassword);
+            @Override
+            public void showIntro() {
+                printer.print(INTRO_MESSAGE);
+            }
+
+            @Override
+            public void showCompletion() {
+                printer.print(COMPLETION_MESSAGE);
+            }
+
+            @Override
+            public String readDefaultNickname() {
+                return reader.readLine (DEFAULT_NICK_PROMPT);
+            }
+
+            @Override
+            public String readDefaultPassword() {
+                return reader.readLine (DEFAULT_PASS_PROMPT);
+            }
+
+            @Override
+            public void showDefaultCredentialsSuccess() {
+                printer.print(DEFAULT_CREDENTIALS_SUCCESS);
+            }
+
+            @Override
+            public String readPersonalNickname() {
+                return reader.readLine (PERSONAL_NICK_PROMPT);
+            }
+
+            @Override
+            public String readPersonalPassword() {
+                return reader.readLine (PERSONAL_PASS_PROMPT);
+            }
+
+            @Override
+            public void showPersonalCredentialsSuccess() {
+                printer.print(PERSONAL_CREDENTIALS_SUCCESS);
+            }
+
+            @Override
+            public String readTerritorialScope() {
+                return reader.readLine (TERRITORIAL_SCOPE_PROMPT);
+            }
+
+            @Override
+            public String readMaxPeople() {
+                return reader.readLine (MAX_PEOPLE_PROMPT);
+            }
+
+            @Override
+            public void showError(String message) {
+                printer.println (ERROR_PREFIX + message);
+            }
+        };
+    }
+
+    private FirstAccessService.VolunteerFirstAccessView buildVolunteerView(){
+        return new FirstAccessService.VolunteerFirstAccessView () {
+            @Override
+            public void showSeparator() {
+                printer.print(MENU_SEPARATOR);
+            }
+
+            @Override
+            public void showVolunteerHeader() {
+                printer.print(VOLUNTEER_FIRST_ACCESS_HEADER);
+            }
+
+            @Override
+            public String readVolunteerDefaultPassword() {
+                return reader.readLine (VOLUNTEER_DEFAULT_PASSWORD_PROMPT);
+            }
+
+            @Override
+            public void showOperationAborted() {
+                printer.print(OPERATION_ABORTED);
+            }
+
+            @Override
+            public String readVolunteerNewNickname() {
+                return reader.readLine (VOLUNTEER_NEW_NICKNAME_PROMPT);
+            }
+
+            @Override
+            public String readVolunteerNewPassword() {
+                return reader.readLine (VOLUNTEER_NEW_PASSWORD_PROMPT);
+            }
+
+            @Override
+            public String readVolunteerConfirmPassword() {
+                return reader.readLine (VOLUNTEER_CONFIRM_PASSWORD_PROMPT);
+            }
+
+            @Override
+            public void showPasswordMismatch() {
+                printer.println(ERROR_PREFIX + VOLUNTEER_PASSWORD_MISMATCH);
+            }
+
+            @Override
+            public void showVolunteerSuccess(String newNickname) {
                 printer.println (VOLUNTEER_FIRST_ACCESS_SUCCESS.formatted (newNickname));
-                return newNickname;
-            } catch (IllegalArgumentException |  IllegalStateException ex ) {
-                printer.println (ERROR_PREFIX + safeMessage (ex));
             }
 
-        }
-    }
-
-    private String verifyDefaultCredentials(){
-        boolean verified = false;
-        String sanitizedNickname = null;
-        while(!verified){
-            String nickname = reader.readLine (DEFAULT_NICK_PROMPT);
-            String password = reader.readLine (DEFAULT_PASS_PROMPT);
-            try{
-                service.verifyDefaultCredentials(nickname, password);
-                printer.println (DEFAULT_CREDENTIALS_SUCCESS);
-                verified = true;
-                sanitizedNickname = nickname == null ? null : nickname.trim ();
-            } catch (IllegalArgumentException | IllegalStateException e){
-                printer.println(ERROR_PREFIX + safeMessage(e));
+            @Override
+            public void showError(String message) {
+                printer.println (ERROR_PREFIX + message);
             }
-        }
-        return sanitizedNickname;
-    }
-
-    private void setPersonalCredentials(String defaultNickname){
-        boolean stored = false;
-        while(!stored) {
-            String nickname = reader.readLine (PERSONAL_NICK_PROMPT);
-            String password = reader.readLine (PERSONAL_PASS_PROMPT);
-            try{
-                service.setPersonalCredentials(defaultNickname, nickname, password);
-                printer.println(PERSONAL_CREDENTIALS_SUCCESS);
-                stored = true;
-            } catch(IllegalArgumentException | IllegalStateException e){
-                printer.println( ERROR_PREFIX + safeMessage(e));
-            }
-        }
-    }
-
-    private void configureTerritorialScope(){
-        boolean configured = false;
-        while(!configured) {
-            String scope = reader.readLine(TERRITORIAL_SCOPE_PROMPT);
-            try {
-                service.setTerritorialScope(scope);
-                configured = true;
-            } catch (IllegalArgumentException | IllegalStateException e){
-                printer.println (ERROR_PREFIX + safeMessage(e));
-            }
-        }
-    }
-
-    private void configureMaxParticipants(){
-        boolean configured = false;
-        while(!configured) {
-            String rawValue = reader.readLine(MAX_PEOPLE_PROMPT);
-            try{
-                int value = Integer.parseInt (rawValue);
-                service.setMaxPeoplePerSubscription (value);
-                configured = true;
-            } catch(NumberFormatException e){
-                printer.println (ERROR_PREFIX + "Inserire un numero intero valido");
-            } catch(IllegalArgumentException | IllegalStateException e){
-                printer.println (ERROR_PREFIX + safeMessage(e));
-            }
-        }
-    }
-
-
-
-    private String safeMessage(RuntimeException ex){
-        String message = ex.getMessage();
-        return message == null ? "" : message;
+        };
     }
 }
