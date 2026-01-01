@@ -105,6 +105,20 @@ public class PlannedVisit {
                 .mapToInt (VisitBooking::getParticipants)
                 .sum ();
     }
+
+    public void updateStatus(VisitType visitType) {
+        Objects.requireNonNull(visitType, "Il tipo visita non può essere nullo");
+        int total = getBookedParticipants();
+        if (status == VisitStatus.CANCELLED) {
+            return;
+        }
+        if (total >= visitType.getMinParticipants()) {
+            setStatus(VisitStatus.CONFIRMED);
+        } else {
+            setStatus(VisitStatus.PROPOSED);
+        }
+    }
+
     public VisitBooking findBookingByCode(String code){
         if (code == null) return null;
 
