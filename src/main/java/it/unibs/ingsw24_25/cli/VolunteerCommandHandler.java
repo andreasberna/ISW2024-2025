@@ -1,7 +1,7 @@
 package it.unibs.ingsw24_25.cli;
 
 import it.unibs.ingsw24_25.DTO.VisitOccurrenceDTO;
-import it.unibs.ingsw24_25.model.MonthlyAvailability;
+import it.unibs.ingsw24_25.controller.VolunteerController;
 import it.unibs.ingsw24_25.service.VolunteerService;
 
 import java.time.DayOfWeek;
@@ -42,7 +42,7 @@ public class VolunteerCommandHandler {
     private static final String VOLUNTEER_INVALID_VISIT_SELECTION = "Selezione non valida. Inserire un numero di visita.";
     private static final DateTimeFormatter YEAR_MONTH_INPUT_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
 
-    private final VolunteerService volunteerService;
+    private final VolunteerController volunteerController;
     private final FirstAccessSetup firstAccessSetup;
     private final Printer printer;
     private final PromptReader reader;
@@ -50,11 +50,11 @@ public class VolunteerCommandHandler {
 
     private String activeVolunteerNickname;
 
-    public VolunteerCommandHandler(VolunteerService volunteerService,
+    public VolunteerCommandHandler(VolunteerController volunteerController,
                                    FirstAccessSetup firstAccessSetup,
                                    Printer printer,
                                    PromptReader reader) {
-        this.volunteerService = Objects.requireNonNull(volunteerService);
+        this.volunteerController = Objects.requireNonNull(volunteerController);
         this.firstAccessSetup = Objects.requireNonNull(firstAccessSetup);
         this.printer = Objects.requireNonNull(printer);
         this.reader = Objects.requireNonNull(reader);
@@ -94,7 +94,7 @@ public class VolunteerCommandHandler {
                 }
 
                 String activeNickname = sanitized;
-                if (volunteerService.isFirstAccessPending(sanitized)) {
+                if (volunteerController.isFirstAccessPending(sanitized)) {
                     String updatedNickname = firstAccessSetup.handleVolunteerFirstAccess(sanitized);
                     if (updatedNickname == null) {
                         continue;
@@ -122,7 +122,7 @@ public class VolunteerCommandHandler {
                 return false;
             }
 
-            if (volunteerService.verifyLogin(nickname, password)) {
+            if (volunteerController.verifyLogin(nickname, password)) {
                 printer.println(VOLUNTEER_LOGIN_SUCCESS);
                 return true;
             }
@@ -187,10 +187,9 @@ public class VolunteerCommandHandler {
         }
 
         LocalDate today = LocalDate.now();
-        MonthlyAvailability availability = new MonthlyAvailability(month, preferredDays, weeklyFrequency, today);
 
         try {
-            volunteerService.submitAvailability(nickname, availability, today);
+            volunteerController.submitAvailability(nickname, month, preferredDays, weeklyFrequency, today);
             printer.println(VOLUNTEER_AVAILABILITY_SUCCESS);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println(ERROR_PREFIX + safeMessage(ex));
@@ -206,7 +205,13 @@ public class VolunteerCommandHandler {
         }
 
         try {
-            VolunteerCliSupport.displayAvailability(volunteerService, printer, nickname, month, YEAR_MONTH_INPUT_FORMATTER);
+            VolunteerCliSupport.displayAvailability(
+                    printer,
+                    nickname,
+                    month,
+                    YEAR_MONTH_INPUT_FORMATTER,
+                    volunteerController.loadAvailability(nickname, month)
+            );
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println(ERROR_PREFIX + safeMessage(ex));
         }
@@ -221,7 +226,13 @@ public class VolunteerCommandHandler {
         }
 
         try {
-            VolunteerCliSupport.displaySchedule(volunteerService, printer, nickname, month, YEAR_MONTH_INPUT_FORMATTER);
+            VolunteerCliSupport.displaySchedule(
+                    printer,
+                    nickname,
+                    month,
+                    YEAR_MONTH_INPUT_FORMATTER,
+                    volunteerController.loadSchedule(nickname, month)
+            );
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println(ERROR_PREFIX + safeMessage(ex));
         }
@@ -234,7 +245,8 @@ public class VolunteerCommandHandler {
         if (month == null) {return true;}
 
         try{
-            List<VisitOccurrenceDTO> visits = VolunteerCliSupport.displayConfirmedVisits (volunteerService, printer, nickname, month,YEAR_MONTH_INPUT_FORMATTER);
+            List<VisitOccurrenceDTO> visits = volunteerController.loadConfirmedVisits(nickname, month);
+            VolunteerCliSupport.displayConfirmedVisits(printer, nickname, month, YEAR_MONTH_INPUT_FORMATTER, visits);
             if (!visits.isEmpty()) {
                 inspectVisitBooking (visits);
             }

@@ -4,8 +4,7 @@ import it.unibs.ingsw24_25.DTO.*;
 import it.unibs.ingsw24_25.cli.Printer;
 import it.unibs.ingsw24_25.cli.PromptReader;
 import it.unibs.ingsw24_25.model.TimeSlot;
-import it.unibs.ingsw24_25.service.ConfiguratorService;
-import it.unibs.ingsw24_25.service.ConfiguratorServiceImp;
+import it.unibs.ingsw24_25.controller.ConfiguratorController;
 import it.unibs.ingsw24_25.util.AvailabilitySubmissionPolicy;
 import it.unibs.ingsw24_25.util.ExcludedDatePolicy;
 
@@ -114,16 +113,16 @@ public class ConfiguratorCommandHandler {
     private static final String MAX_PEOPLE_PROMPT = "Inserisci il numero massimo di persone per iscrizione: ";
     private static final String MAX_PEOPLE_SUCCESS = "Numero massimo di persone per iscrizione aggiornato.";
 
-    private final ConfiguratorService service;
+    private final ConfiguratorController configuratorController;
     private final FirstAccessSetup firstAccessSetup;
     private final Printer printer;
     private final PromptReader reader;
 
-    public ConfiguratorCommandHandler(ConfiguratorService service,
+    public ConfiguratorCommandHandler(ConfiguratorController configuratorController,
                                       FirstAccessSetup firstAccessSetup,
                                       Printer printer,
                                       PromptReader reader) {
-        this.service = Objects.requireNonNull(service);
+        this.configuratorController = Objects.requireNonNull(configuratorController);
         this.firstAccessSetup = Objects.requireNonNull(firstAccessSetup);
         this.printer = Objects.requireNonNull(printer);
         this.reader = Objects.requireNonNull(reader);
@@ -139,7 +138,7 @@ public class ConfiguratorCommandHandler {
     }
 
     private boolean prepareConfiguratorSession() {
-        if (!service.hasPendingConfiguratorSeeds()) {
+        if (!configuratorController.hasPendingConfiguratorSeeds()) {
             return authenticateCOnfigurator();
         }
 
@@ -162,12 +161,12 @@ public class ConfiguratorCommandHandler {
             switch (normalized) {
                 case "1", "first", "primo", "setup" -> {
                     firstAccessSetup.run();
-                    if (!service.hasPendingConfiguratorSeeds()) {
+                    if (!configuratorController.hasPendingConfiguratorSeeds()) {
                         return authenticateCOnfigurator();
                     }
                 }
                 case "2", "login", "normale" -> {
-                    if (service.listConfigurators().isEmpty()) {
+                    if (configuratorController.listConfigurators().isEmpty()) {
                         printer.println(ERROR_PREFIX + CONFIGURATOR_LOGIN_UNAVAILABLE);
                         break;
                     }
@@ -184,7 +183,7 @@ public class ConfiguratorCommandHandler {
     }
 
     private boolean authenticateCOnfigurator() {
-        if (service.listConfigurators ().isEmpty ()) return true;
+        if (configuratorController.listConfigurators ().isEmpty ()) return true;
 
         printer.println (MENU_SEPARATOR);
         printer.println (CONFIGURATOR_LOGIN_HEADER);
@@ -203,7 +202,7 @@ public class ConfiguratorCommandHandler {
                 return false;
             }
 
-            if (service.verifyLogin (nickname, password)) {
+            if (configuratorController.verifyLogin (nickname, password)) {
                 printer.println (CONFIGURATOR_LOGIN_SUCCESS);
                 return true;
             }
@@ -349,7 +348,7 @@ public class ConfiguratorCommandHandler {
             String title = Objects.requireNonNull (reader.readLine (PLACE_NAME_PROMPT));
             String description = Objects.requireNonNull(reader.readLine (PLACE_DESCRIPTION_PROMPT));
             String location = Objects.requireNonNull(reader.readLine (PLACE_LOCATION_PROMPT));
-            String result = service.addPlace(title, description, location);
+            String result = configuratorController.addPlace(title, description, location);
             printer.println (result);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println (ERROR_PREFIX + safeMessage (ex));
@@ -372,7 +371,7 @@ public class ConfiguratorCommandHandler {
                 return;
             }
 
-            String result = service.addVisitType (
+            String result = configuratorController.addVisitType (
                     placeId,
                     title,
                     description,
@@ -393,7 +392,7 @@ public class ConfiguratorCommandHandler {
         try {
             String nickname = Objects.requireNonNull (reader.readLine (VOLUNTEER_NICKNAME_PROMPT));
             String password = Objects.requireNonNull(reader.readLine (VOLUNTEER_PASSWORD_PROMPT));
-            service.addVolunteer(nickname, password);
+            configuratorController.addVolunteer(nickname, password);
             printer.println (VOLUNTEER_SUCCESS);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println (ERROR_PREFIX + safeMessage (ex));
@@ -403,7 +402,7 @@ public class ConfiguratorCommandHandler {
         try {
             String nickname = Objects.requireNonNull (reader.readLine (VOLUNTEER_NICKNAME_PROMPT));
             String visitId = Objects.requireNonNull (reader.readLine (VOLUNTEER_LINK_VISIT_PROMPT));
-            service.linkVOlunteerToVisit (nickname, visitId);
+            configuratorController.linkVolunteerToVisit (nickname, visitId);
             printer.println (VOLUNTEER_LINK_SUCCESS);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println (ERROR_PREFIX + safeMessage (ex));
@@ -413,11 +412,11 @@ public class ConfiguratorCommandHandler {
     //list methods
     private void listPlaces() {
         printer.println(Printer.PLACE_HEADER);
-        List<PlaceDTO> places = service.listPlace ();
+        List<PlaceDTO> places = configuratorController.listPlace ();
         printer.printPlaceList (places);
     }
     private void listVisitTypeByPlace() {
-        List<PlaceDTO> places = service.listPlace ();
+        List<PlaceDTO> places = configuratorController.listPlace ();
         printer.println(Printer.PLACE_HEADER);
         printer.printPlaceList (places);
         if (places == null || places.isEmpty()) {
@@ -425,7 +424,7 @@ public class ConfiguratorCommandHandler {
         }
         String placeId = reader.readLine (PLACE_SELECTION_PROMPT);
         try {
-            List<VisitTypeDTO> visitTypes = service.listVisitTypeByPlace (placeId);
+            List<VisitTypeDTO> visitTypes = configuratorController.listVisitTypeByPlace (placeId);
             printer.println (Printer.VISIT_TYPE_HEADER);
             printer.printVisitTypeList (visitTypes);
         } catch (IllegalArgumentException ex) {
@@ -434,7 +433,7 @@ public class ConfiguratorCommandHandler {
     }
     private void listVisistTypeWithState() {
         try {
-            List<VisitTypeDTO> visitTypes = service.listVisitType ();
+            List<VisitTypeDTO> visitTypes = configuratorController.listVisitType ();
             printer.println (Printer.VISIT_TYPE_HEADER);
             printer.printVisitTypeList (visitTypes);
         } catch (IllegalArgumentException ex) {
@@ -443,7 +442,7 @@ public class ConfiguratorCommandHandler {
     }
     private void listVolunteer() {
         printer.println(Printer.VOLUNTEER_HEADER);
-        List<VolunteerDTO> volunteers = service.listVolunteerWVisitType ();
+        List<VolunteerDTO> volunteers = configuratorController.listVolunteerWithVisitType ();
         printer.printVolunteerList (volunteers);
     }
 
@@ -459,7 +458,7 @@ public class ConfiguratorCommandHandler {
 
         if (rawDates.isEmpty()) {
             try {
-                service.setBlackoutDates (List.of());
+                configuratorController.setBlackoutDates (List.of());
                 printer.println (PRECLUDED_DATES_SUCCESS);
             } catch (IllegalArgumentException | IllegalStateException ex) {
                 printer.println (ERROR_PREFIX + safeMessage(ex));
@@ -477,7 +476,7 @@ public class ConfiguratorCommandHandler {
             }
         }
         try {
-            service.setBlackoutDates (dates);
+            configuratorController.setBlackoutDates (dates);
             printer.println (PRECLUDED_DATES_SUCCESS);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println (ERROR_PREFIX + safeMessage(ex));
@@ -495,7 +494,7 @@ public class ConfiguratorCommandHandler {
         }
 
         try {
-            service.setMaxPeoplePerSubscription(max);
+            configuratorController.setMaxPeoplePerSubscription(max);
             printer.println (MAX_PEOPLE_SUCCESS);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println (ERROR_PREFIX + safeMessage(ex));
@@ -506,7 +505,7 @@ public class ConfiguratorCommandHandler {
     private void closeAvailabilityWindowFlow() {
         LocalDate today = readDate (PLANNING_DATE_PROMPT);
         try {
-            service.closeAvailabilityWindow (today);
+            configuratorController.closeAvailabilityWindow (today);
             printer.println (PLANNING_SUCCESS_CLOSE);
             YearMonth targetMonth = AvailabilitySubmissionPolicy.nextSubmissionMonth (today);
             displayAvailabilitySnapshots(targetMonth);
@@ -518,7 +517,7 @@ public class ConfiguratorCommandHandler {
     private void generatePlanFlow(){
         YearMonth month = readYearMonth(PLANNING_MONTH_PROMPT);
         try {
-            MonthlyPlanDTO plan = service.generateMonthlyPlan (month);
+            MonthlyPlanDTO plan = configuratorController.generateMonthlyPlan (month);
             printer.println (PLANNING_SUCCESS_GENERATION);
             printer.printMonthlyPlan(plan);
         } catch (IllegalArgumentException | IllegalStateException ex) {
@@ -535,7 +534,7 @@ public class ConfiguratorCommandHandler {
         String visitTypeId = reader.readLine (PLANNING_VISIT_TYPE_PROMPT);
         String volunteerId = reader.readLine (PLANNING_VOLUNTEER_PROMPT);
         try {
-            service.assignVolunteerToPlannedVisit (month, date, slot, visitTypeId, volunteerId);
+            configuratorController.assignVolunteerToPlannedVisit (month, date, slot, visitTypeId, volunteerId);
             printer.println (PLANNING_SUCCESS_ASSIGNMENT);
             displayPlan(month);
         } catch (IllegalArgumentException | IllegalStateException ex) {
@@ -551,7 +550,7 @@ public class ConfiguratorCommandHandler {
         TimeSlot slot = new TimeSlot(date.getDayOfWeek(), startTime, Duration.ofMinutes(durationMinutes));
         String visitTypeId = reader.readLine(PLANNING_VISIT_TYPE_PROMPT);
         try {
-            service.removePlannedVisit(month, date, slot, visitTypeId);
+            configuratorController.removePlannedVisit(month, date, slot, visitTypeId);
             printer.println(PLANNING_SUCCESS_VISIT_REMOVAL);
             displayPlan(month);
         } catch (IllegalArgumentException | IllegalStateException ex) {
@@ -567,7 +566,7 @@ public class ConfiguratorCommandHandler {
             return;
         }
         try {
-            service.removePlace (placeId);
+            configuratorController.removePlace (placeId);
             printer.println (PLANNING_SUCCESS_PLACE_REMOVAL);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println (ERROR_PREFIX + safeMessage(ex));
@@ -581,7 +580,7 @@ public class ConfiguratorCommandHandler {
             return;
         }
         try {
-            service.removeVisitType (visitTypeId);
+            configuratorController.removeVisitType (visitTypeId);
             printer.println (PLANNING_SUCCESS_VISIT_TYPE_REMOVAL);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println (ERROR_PREFIX + safeMessage(ex));
@@ -595,7 +594,7 @@ public class ConfiguratorCommandHandler {
             return;
         }
         try {
-            service.removeVolunteer (volunteer);
+            configuratorController.removeVolunteer (volunteer);
             printer.println (PLANNING_SUCCESS_VOLUNTEER_REMOVAL);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println (ERROR_PREFIX + safeMessage(ex));
@@ -605,7 +604,7 @@ public class ConfiguratorCommandHandler {
     private void reopenAvailabilityWindowFlow(){
         LocalDate today = readDate (PLANNING_DATE_PROMPT);
         try{
-            service.reopenAvailabilityWindow (today);
+            configuratorController.reopenAvailabilityWindow (today);
             printer.println (PLANNING_SUCCESS_REOPEN);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             printer.println (ERROR_PREFIX + safeMessage(ex));
@@ -741,7 +740,7 @@ public class ConfiguratorCommandHandler {
 
     private void displayAvailabilitySnapshots(YearMonth month) {
         try {
-            MonthlyPlanDTO plan = service.getMonthlyPlanDetails(month);
+            MonthlyPlanDTO plan = configuratorController.getMonthlyPlanDetails(month);
             List<PlanAvailabilityDTO> snapshots = plan.getAvailabilitySnapshots();
             if (snapshots == null || snapshots.isEmpty()) {
                 printer.println("Nessuna disponibilità registrata per il mese " + month + ".");
@@ -757,7 +756,7 @@ public class ConfiguratorCommandHandler {
 
     private void displayPlan(YearMonth month) {
         try {
-            MonthlyPlanDTO plan = service.getMonthlyPlanDetails(month);
+            MonthlyPlanDTO plan = configuratorController.getMonthlyPlanDetails(month);
             printer.printMonthlyPlan(plan);
         } catch (IllegalStateException ex) {
             printer.println(PLANNING_NO_PLAN_MESSAGE);

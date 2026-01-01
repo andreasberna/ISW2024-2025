@@ -5,8 +5,6 @@ import it.unibs.ingsw24_25.DTO.VisitOccurrenceDTO;
 import it.unibs.ingsw24_25.model.AssignedShift;
 import it.unibs.ingsw24_25.model.MonthlyAvailability;
 import it.unibs.ingsw24_25.model.TimeSlot;
-import it.unibs.ingsw24_25.service.VolunteerService;
-
 import java.time.DayOfWeek;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -27,38 +25,36 @@ public class VolunteerCliSupport {
     private VolunteerCliSupport() {
     }
 
-    static void displayAvailability(VolunteerService service,
-                                    Printer printer,
+    static void displayAvailability(Printer printer,
                                     String nickname,
                                     YearMonth month,
-                                    DateTimeFormatter formatter) {
-        Objects.requireNonNull(service, "VolunteerService non può essere nullo");
+                                    DateTimeFormatter formatter,
+                                    Optional<MonthlyAvailability> availability) {
         Objects.requireNonNull(printer, "Printer non può essere nullo");
         Objects.requireNonNull(nickname, "Nickname non può essere nullo");
         Objects.requireNonNull(month, "Il mese non può essere nullo");
+        Objects.requireNonNull(availability, "availability non può essere nullo");
 
         DateTimeFormatter effectiveFormatter = formatter == null ? DateTimeFormatter.ofPattern("yyyy-MM") : formatter;
 
-        service.loadAvailability(nickname, month)
-                .ifPresentOrElse(
-                        availability -> printAvailability(printer, nickname, availability),
-                        () -> printer.println(VOLUNTEER_NO_AVAILABILITY.formatted(nickname, month.format(effectiveFormatter)))
-                );
+        availability.ifPresentOrElse (
+                value -> printAvailability (printer, nickname, value),
+                () -> printer.println (VOLUNTEER_NO_AVAILABILITY.formatted (nickname, month.format (effectiveFormatter)))
+        );
     }
 
-    static void displaySchedule(VolunteerService service,
-                                Printer printer,
+    static void displaySchedule(Printer printer,
                                 String nickname,
                                 YearMonth month,
-                                DateTimeFormatter formatter) {
-        Objects.requireNonNull(service, "VolunteerService non può essere nullo");
+                                DateTimeFormatter formatter,
+                                List<AssignedShift> shifts) {
         Objects.requireNonNull(printer, "Printer non può essere nullo");
         Objects.requireNonNull(nickname, "Nickname non può essere nullo");
         Objects.requireNonNull(month, "Il mese non può essere nullo");
+        Objects.requireNonNull (shifts, "Shifts non può essere nullo");
 
         DateTimeFormatter effectiveFormatter = formatter == null ? DateTimeFormatter.ofPattern("yyyy-MM") : formatter;
 
-        List<AssignedShift> shifts = service.loadSchedule(nickname, month);
         if (shifts.isEmpty()) {
             printer.println(VOLUNTEER_NO_SHIFTS.formatted(nickname, month.format(effectiveFormatter)));
             return;
@@ -77,36 +73,36 @@ public class VolunteerCliSupport {
                 .forEach(printer::println);
     }
 
-    static List<VisitOccurrenceDTO> displayConfirmedVisits(VolunteerService service,
-                                       Printer printer,
+    static void displayConfirmedVisits(Printer printer,
                                        String nickname,
                                        YearMonth month,
-                                       DateTimeFormatter formatter) {
-        Objects.requireNonNull(service, "Service non può essere nullo");
+                                       DateTimeFormatter formatter,
+                                       List<VisitOccurrenceDTO> visits) {
         Objects.requireNonNull(printer, "Printer non può essere nullo");
         Objects.requireNonNull(nickname, "Nickname non può essere nullo");
         Objects.requireNonNull(month, "Il mese non può essere nullo");
+        Objects.requireNonNull(visits, "visits non può essere nullo");
 
         DateTimeFormatter effectiveFormatter = formatter == null ? DateTimeFormatter.ofPattern("yyyy-MM") : formatter;
 
-        List<VisitOccurrenceDTO> visits = service.loadConfirmedGuidedVisits (nickname, month).stream ()
-                .filter (Objects::nonNull)
-                .sorted (Comparator.comparing (VisitOccurrenceDTO::getDate)
-                        .thenComparing (VisitOccurrenceDTO::getStartTime, Comparator.nullsLast (Comparator.naturalOrder ()))
-                        .thenComparing (VisitOccurrenceDTO::getTitle, Comparator.nullsLast (String::compareToIgnoreCase)))
-                .toList ();
-        if (visits.isEmpty()) {
+        List<VisitOccurrenceDTO> sortedVisits = visits.stream ()
+                        .filter (Objects::nonNull)
+                        .sorted (Comparator.comparing (VisitOccurrenceDTO::getDate)
+                                .thenComparing (VisitOccurrenceDTO::getStartTime, Comparator.nullsLast (Comparator.naturalOrder ()))
+                                .thenComparing (VisitOccurrenceDTO::getTitle, Comparator.nullsLast (String::compareToIgnoreCase)))
+                        .toList ();
+
+        if (sortedVisits.isEmpty()) {
             printer.println (VOLUNTEER_NO_CONFIRMED.formatted(nickname, month.format(effectiveFormatter)));
-            return List.of();
+            return;
         }
 
         printer.println (VOLUNTEER_CONFIRMED_HEADER.formatted(nickname, month.format(effectiveFormatter)));
 
         int index = 1;
-        for (VisitOccurrenceDTO visit : visits) {
+        for (VisitOccurrenceDTO visit : sortedVisits) {
             printer.println (formatConfirmedVisitSummary (index++, visit));
         }
-        return visits;
     }
 
     static void displayVisitBookings(Printer printer, VisitOccurrenceDTO visit) {

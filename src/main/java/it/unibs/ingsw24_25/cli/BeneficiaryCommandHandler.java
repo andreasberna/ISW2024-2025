@@ -3,7 +3,7 @@ package it.unibs.ingsw24_25.cli;
 import it.unibs.ingsw24_25.DTO.VisitBookingDTO;
 import it.unibs.ingsw24_25.DTO.VisitOccurrenceDTO;
 import it.unibs.ingsw24_25.model.VisitStatus;
-import it.unibs.ingsw24_25.service.BeneficiaryService;
+import it.unibs.ingsw24_25.controller.BeneficiaryController;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -21,14 +21,14 @@ public class BeneficiaryCommandHandler {
     private static final String DEFAULT_PROMPT = "> ";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    private final BeneficiaryService beneficiaryService;
+    private final BeneficiaryController beneficiaryController;
     private final Printer printer;
     private final PromptReader reader;
 
     private String activeUsername;
 
-    public BeneficiaryCommandHandler(BeneficiaryService beneficiaryService, Printer printer, PromptReader reader) {
-        this.beneficiaryService = Objects.requireNonNull(beneficiaryService);
+    public BeneficiaryCommandHandler(BeneficiaryController beneficiaryController, Printer printer, PromptReader reader) {
+        this.beneficiaryController = Objects.requireNonNull(beneficiaryController);
         this.printer = Objects.requireNonNull(printer);
         this.reader = Objects.requireNonNull(reader);
     }
@@ -81,7 +81,7 @@ public class BeneficiaryCommandHandler {
             return;
         }
         try{
-            beneficiaryService.register (fullName, username, password);
+            beneficiaryController.register (fullName, username, password);
             printer.println ("Registrazione completata. Ora puoi accedere.");
         } catch (IllegalArgumentException | IllegalStateException ex){
             printer.println (ERROR_PREFIX + safeMessage(ex));
@@ -100,7 +100,7 @@ public class BeneficiaryCommandHandler {
                 printer.println(OPERATION_ABORTED);
                 return false;
             }
-            if (beneficiaryService.verifyLogin (username,password)){
+            if (beneficiaryController.verifyLogin (username,password)){
                 this.activeUsername = username.trim ();
                 printer.println ("Accesso effettuato.");
                 return true;
@@ -185,7 +185,7 @@ public class BeneficiaryCommandHandler {
 
     private void displayVisits(VisitStatus status) {
         try {
-            List<VisitOccurrenceDTO> visits = beneficiaryService.listVisitsByStatus(status);
+            List<VisitOccurrenceDTO> visits = beneficiaryController.listVisitsByStatus(status);
             if (visits.isEmpty()) {
                 printer.println ("Nessuna visita " + status.name ().toLowerCase (Locale.ITALIAN) + " disponibile.");
                 return;
@@ -201,7 +201,7 @@ public class BeneficiaryCommandHandler {
 
     private void bookVisitFlow() {
         String username = requireActiveUsername ();
-        List<VisitOccurrenceDTO> visits = beneficiaryService.listVisitsByStatus (VisitStatus.PROPOSED);
+        List<VisitOccurrenceDTO> visits = beneficiaryController.listVisitsByStatus (VisitStatus.PROPOSED);
         if (visits.isEmpty()) {
             printer.println ("Nessuna visita prenotabile al momento.");
             return;
@@ -225,7 +225,7 @@ public class BeneficiaryCommandHandler {
         }
 
         try {
-            String code = beneficiaryService.bookVisit (username, visitId, participants, notes, LocalDate.now());
+            String code = beneficiaryController.bookVisit (username, visitId, participants, notes, LocalDate.now());
             printer.println ("Prenotazione effettuata. Codice: " + code);
         } catch (RuntimeException ex) {
             printer.println (ERROR_PREFIX + safeMessage (ex));
@@ -234,7 +234,7 @@ public class BeneficiaryCommandHandler {
 
     private void displayBookings() {
         try {
-            List<VisitBookingDTO> bookings = beneficiaryService.listBookings(requireActiveUsername());
+            List<VisitBookingDTO> bookings = beneficiaryController.listBookings(requireActiveUsername());
             if (bookings.isEmpty()) {
                 printer.println("Nessuna prenotazione effettuata.");
                 return;
@@ -255,7 +255,7 @@ public class BeneficiaryCommandHandler {
             return;
         }
         try {
-            beneficiaryService.cancelBooking(requireActiveUsername(), code, LocalDate.now());
+            beneficiaryController.cancelBooking(requireActiveUsername(), code, LocalDate.now());
             printer.println("Prenotazione annullata.");
         } catch (RuntimeException ex) {
             printer.println(ERROR_PREFIX + safeMessage(ex));
