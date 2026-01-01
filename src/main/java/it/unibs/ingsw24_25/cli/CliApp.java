@@ -1,11 +1,8 @@
 package it.unibs.ingsw24_25.cli;
 
-import it.unibs.ingsw24_25.service.ConfiguratorService;
 
-import java.io.PrintStream;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Scanner;
 
 public class CliApp implements Runnable {
     private static final String DEFAULT_PROMPT = "> ";

@@ -1,5 +1,8 @@
 package it.unibs.ingsw24_25.cli;
 
+import it.unibs.ingsw24_25.controller.BeneficiaryController;
+import it.unibs.ingsw24_25.controller.ConfiguratorController;
+import it.unibs.ingsw24_25.controller.VolunteerController;
 import it.unibs.ingsw24_25.repository.*;
 import it.unibs.ingsw24_25.service.*;
 
@@ -30,14 +33,18 @@ public class Main {
                 provisionedCredentialsRepository, volunteerService, visitTypeRepository);
         BeneficiaryService beneficiaryService = buildBeneficiaryService(BENEFICIARY_FILE, volunteerRepository, monthlyVisitPlanRepository,
                 visitTypeRepository, settingsRepository);
+        ConfiguratorController configuratorController = new ConfiguratorController (service);
+        VolunteerController volunteerController = new VolunteerController (volunteerService);
+        BeneficiaryController beneficiaryController = new BeneficiaryController (beneficiaryService);
         Printer printer = new Printer (System.out);
         PromptReader reader = new PromptReader (new Scanner (System.in));
 
-        FirstAccessSetup setup = new FirstAccessSetup (service, volunteerService, reader, printer);
+        FirstAccessService firstAccessService = new FirstAccessService (service, volunteerService);
+        FirstAccessSetup setup = new FirstAccessSetup (firstAccessService, reader, printer);
 
-        ConfiguratorCommandHandler configuratorHandler = new ConfiguratorCommandHandler (service, setup, printer, reader);
-        VolunteerCommandHandler volunteerHandler = new VolunteerCommandHandler (volunteerService, setup, printer, reader);
-        BeneficiaryCommandHandler beneficiaryHandler = new BeneficiaryCommandHandler (beneficiaryService, printer, reader);
+        ConfiguratorCommandHandler configuratorHandler = new ConfiguratorCommandHandler (configuratorController, setup, printer, reader);
+        VolunteerCommandHandler volunteerHandler = new VolunteerCommandHandler (volunteerController, setup, printer, reader);
+        BeneficiaryCommandHandler beneficiaryHandler = new BeneficiaryCommandHandler (beneficiaryController, printer, reader);
 
         CliApp cliApp = new CliApp (reader, printer, configuratorHandler, volunteerHandler, beneficiaryHandler);
         cliApp.run();
