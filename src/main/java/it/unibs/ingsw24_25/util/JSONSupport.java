@@ -16,6 +16,7 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.Collections;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public final class JSONSupport {
 
@@ -102,73 +103,55 @@ public final class JSONSupport {
 
     // ---------- Configurator ----------
     public static String serializeConfigurator(Map<String, Configurator> map){
-        return GSON.toJson (map, CONFIG_MAP_TYPE);
+        return serializeMap (map, CONFIG_MAP_TYPE);
     }
     public static Map<String, Configurator> deserializeConfigurator(String json){
-        if (isBlank(json)) {
-            return Collections.emptyMap();
-        }
-        return GSON.fromJson (json, CONFIG_MAP_TYPE);
+        return deserializeMapOrEmpty (json, CONFIG_MAP_TYPE);
     }
 
     // ---------- Volunteer ----------
     public static String serializeVolunteerMap(Map<String, Volunteer> map) {
-        return GSON.toJson(map, VOL_MAP_TYPE);
+        return serializeMap(map, VOL_MAP_TYPE);
     }
 
     public static Map<String, Volunteer> deserializeVolunteerMap(String json) {
-        if (isBlank(json)) {
-            return Collections.emptyMap();
-        }
-        return GSON.fromJson(json, VOL_MAP_TYPE);
+        return deserializeMapOrEmpty(json, VOL_MAP_TYPE);
     }
 
     // ---------- Place ----------
     public static String serializePlaceMap(Map<String, Place> map) {
-        return GSON.toJson(map, PLACE_MAP_TYPE);
+        return serializeMap(map, PLACE_MAP_TYPE);
     }
 
     public static Map<String, Place> deserializePlaceMap(String json) {
-        if (isBlank(json)) {
-            return Collections.emptyMap();
-        }
-        return GSON.fromJson(json, PLACE_MAP_TYPE);
+        return deserializeMapOrEmpty(json, PLACE_MAP_TYPE);
     }
 
     // ---------- VisitType ----------
     public static String serializeVisitTypeMap(Map<String, VisitType> map) {
-        return GSON.toJson(map, VISIT_MAP_TYPE);
+        return serializeMap(map, VISIT_MAP_TYPE);
     }
 
     public static Map<String, VisitType> deserializeVisitTypeMap(String json) {
-        if (isBlank(json)) {
-            return Collections.emptyMap();
-        }
-        return GSON.fromJson(json, VISIT_MAP_TYPE);
+        return deserializeMapOrEmpty(json, VISIT_MAP_TYPE);
     }
 
     // ---------- MonthlyVisitPlan ----------
     public static String serializeMonthlyVisitPlanMap(Map<String, MonthlyVisitPlan> map) {
-        return GSON.toJson(map, PLAN_MAP_TYPE);
+        return serializeMap(map, PLAN_MAP_TYPE);
     }
 
     public static Map<String, MonthlyVisitPlan> deserializeMonthlyVisitPlanMap(String json) {
-        if (isBlank(json)) {
-            return Collections.emptyMap();
-        }
-        return GSON.fromJson(json, PLAN_MAP_TYPE);
+        return deserializeMapOrEmpty(json, PLAN_MAP_TYPE);
     }
 
     // ---------- Beneficiaries ----------
     public static String serializeBeneficiaryMap(Map<String, Beneficiary> map) {
-        return GSON.toJson(map, BENEFICIARY_MAP_TYPE);
+        return serializeMap(map, BENEFICIARY_MAP_TYPE);
     }
 
     public static Map<String, Beneficiary> deserializeBeneficiaryMap(String json) {
-        if (isBlank(json)) {
-            return Collections.emptyMap();
-        }
-        return GSON.fromJson(json, BENEFICIARY_MAP_TYPE);
+        return deserializeMapOrEmpty(json, BENEFICIARY_MAP_TYPE);
     }
 
 
@@ -190,11 +173,24 @@ public final class JSONSupport {
     }
 
     public static ProvisionedCredentialStore deserializeProvisionedCredentials(String json) {
+        return deserializeOrDefault(json, PROVISIONED_CREDENTIALS_TYPE, ProvisionedCredentialStore::new);
+    }
+
+
+    private static String serializeMap(Map<?, ?> map, Type type) {
+        return GSON.toJson(map, type);
+    }
+
+    private static <T> Map<String, T> deserializeMapOrEmpty(String json, Type type) {
+        return deserializeOrDefault(json, type, Collections::emptyMap);
+    }
+
+    private static <T> T deserializeOrDefault(String json, Type type, Supplier<T> defaultValueSupplier) {
         if (isBlank(json)) {
-            return new ProvisionedCredentialStore ();
+            return defaultValueSupplier.get();
         }
-        ProvisionedCredentialStore store = GSON.fromJson(json, PROVISIONED_CREDENTIALS_TYPE);
-        return store == null ? new ProvisionedCredentialStore() : store;
+        T result = GSON.fromJson(json, type);
+        return result == null ? defaultValueSupplier.get () :  result;
     }
 
     private static boolean isBlank(String json) {
