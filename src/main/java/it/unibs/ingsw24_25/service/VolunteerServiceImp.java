@@ -16,8 +16,7 @@ public class VolunteerServiceImp implements VolunteerService{
     private final SettingsRepository settingsRepository;
     private final MonthlyVisitPlanRepository monthlyVisitPlanRepository;
     private final VisitTypeRepository visitTypeRepository;
-    private final ProvisionedCredentialsRepository provisionedCredentialsRepository;
-    private final Set<String> defaultCredentialsValidated = new HashSet<> ();
+    private final VolunteerCredentialManager credentialManager;
 
     public VolunteerServiceImp(VolunteerRepository volunteerRepository,
                                SettingsRepository settingsRepository,
@@ -28,7 +27,10 @@ public class VolunteerServiceImp implements VolunteerService{
         this.settingsRepository = Objects.requireNonNull(settingsRepository);
         this.monthlyVisitPlanRepository = Objects.requireNonNull(monthlyVisitPlanRepository);
         this.visitTypeRepository = Objects.requireNonNull(visitTypeRepository);
-        this.provisionedCredentialsRepository = Objects.requireNonNull(provisionedCredentialsRepository);
+        this.credentialManager = new VolunteerCredentialManager(
+                this.volunteerRepository,
+                Objects.requireNonNull(provisionedCredentialsRepository)
+        );
     }
 
 
@@ -90,11 +92,7 @@ public class VolunteerServiceImp implements VolunteerService{
 
     @Override
     public void removeVolunteerAccount(String nickname) {
-        Volunteer volunteer = loadVolunteer(nickname);
-        volunteer.deactivate ();
-        volunteerRepository.deleteByNickname (volunteer.getNickname ());
-        defaultCredentialsValidated.remove(volunteer.getNickname ());
-        provisionedCredentialsRepository.consumeVolunteerCredential (volunteer.getNickname ());
+        credentialManager.removeVolunteerAccount(nickname);
     }
     @Override
     public List<VisitOccurrenceDTO> loadConfirmedGuidedVisits(String nickname, YearMonth month) {
@@ -132,71 +130,22 @@ public class VolunteerServiceImp implements VolunteerService{
 
     @Override
     public boolean isFirstAccessPending(String nickname) {
-        Volunteer volunteer = loadVolunteer(nickname);
-        return volunteer.isFirstAccessPending ();
+        return credentialManager.isFirstAccessPending(nickname);
     }
 
     @Override
     public void verifyDefaultCredentials(String nickname, String password) {
-        Volunteer volunteer = loadVolunteer (nickname);
-        if (!volunteer.isFirstAccessPending ())
-            throw new IllegalStateException ("Le credenziali personali sono già state impostate");
-        String sanitizedPassword = requireNonBlank(password, "la Password di default non può essere nulla");
-        String expectedPassword = provisionedCredentialsRepository.findVolunteerPassword(volunteer.getNickname())
-                .orElseThrow(() -> new IllegalStateException("Credenziali di primo accesso non registrate"));
-        if (!expectedPassword.equals(sanitizedPassword)) {
-            throw new IllegalArgumentException("Credenziali di primo accesso non valide");
-        }
-        if (!volunteer.passwordMatches (sanitizedPassword))
-            throw new IllegalArgumentException ("Credenziali di primo accesso non valide");
-
-        defaultCredentialsValidated.add(volunteer.getNickname ());
+        credentialManager.verifyDefaultCredentials(nickname, password);
     }
 
     @Override
     public void setPersonalCredentials(String currentNickname, String newNickname, String password) {
-        Volunteer volunteer = loadVolunteer(currentNickname);
-        if (!volunteer.isFirstAccessPending ())
-            throw new IllegalStateException ("Le credenziali personali sono state impostate");
-
-        String sanitizedPassword = requireNonBlank(password, "La nuova password non può essere nulla");
-        String sanitizedNickname = requireNonBlank(newNickname, "Il nuovo nickname non può essere vuoto");
-
-        String current = volunteer.getNickname();
-        if (current.equalsIgnoreCase(sanitizedNickname))
-            throw new IllegalArgumentException("Il nuovo nickname deve essere diverso da quello assegnato");
-
-        if (volunteer.passwordMatches(sanitizedPassword))
-            throw new IllegalArgumentException("La nuova password deve essere diversa da quella assegnata");
-
-        if (!current.equalsIgnoreCase(sanitizedNickname) && volunteerRepository.findByNickname(sanitizedNickname).isPresent())
-            throw new IllegalArgumentException("Nickname già presente");
-
-        if(!defaultCredentialsValidated.contains (current))
-            throw new IllegalStateException ("Credenziali di default non ancora verificate");
-
-        volunteerRepository.deleteByNickname(current);
-        volunteer.setNickname(sanitizedNickname);
-        volunteer.setPersonalCredentials (sanitizedPassword);
-        volunteerRepository.save(volunteer);
-        provisionedCredentialsRepository.consumeVolunteerCredential (current);
-        defaultCredentialsValidated.remove(current);
+        credentialManager.setPersonalCredentials(currentNickname, newNickname, password);
     }
 
     @Override
     public boolean verifyLogin(String nickname, String password) {
-        if (nickname == null || password == null) return false;
-        String sanitizedNick = nickname.trim();
-        String sanitizedPassword = password.trim();
-        if(sanitizedNick.isEmpty() || sanitizedPassword.isEmpty()) return false;
-
-        Optional<Volunteer> volunteer = volunteerRepository.findByNickname (sanitizedNick);
-        if (volunteer.isEmpty ()) return false;
-
-        Volunteer loaded = volunteer.get();
-        if (loaded.isFirstAccessPending ()) return false;
-
-        return loaded.passwordMatches (sanitizedPassword);
+        return credentialManager.verifyLogin(nickname, password);
     }
 
     private void ensureAvailabilityNotOnBlackoutDates(MonthlyAvailability availability) {
