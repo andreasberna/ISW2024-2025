@@ -29,4 +29,32 @@ public class AvailabilitySubmissionPolicyTest {
 
         assertThat(result).isFalse();
     }
+
+    @Test
+    void strategyCanBeSwappedWithoutChangingCallers() {
+        AvailabilitySubmissionPolicy.setStrategy(new AvailabilitySubmissionStrategy() {
+            @Override
+            public boolean isWindowOpen(YearMonth referenceMonth, LocalDate today) {
+                return true;
+            }
+
+            @Override
+            public YearMonth nextSubmissionMonth(LocalDate today) {
+                return YearMonth.of(2099, 1);
+            }
+        });
+
+        try {
+            YearMonth referenceMonth = YearMonth.of(2024, 11);
+            LocalDate today = LocalDate.of(2024, 10, 23);
+
+            boolean result = AvailabilitySubmissionPolicy.isWindowOpen(referenceMonth, today);
+
+            assertThat(result).isTrue();
+            assertThat(AvailabilitySubmissionPolicy.nextSubmissionMonth(today))
+                    .isEqualTo(YearMonth.of(2099, 1));
+        } finally {
+            AvailabilitySubmissionPolicy.resetStrategy();
+        }
+    }
 }
