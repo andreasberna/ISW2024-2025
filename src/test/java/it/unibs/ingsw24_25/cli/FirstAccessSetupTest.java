@@ -1,6 +1,7 @@
 package it.unibs.ingsw24_25.cli;
 
 import it.unibs.ingsw24_25.service.ConfiguratorService;
+import it.unibs.ingsw24_25.service.FirstAccessService;
 import it.unibs.ingsw24_25.service.VolunteerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,11 +33,13 @@ class FirstAccessSetupTest {
 
     private ByteArrayOutputStream output;
     private Printer printer;
+    private FirstAccessService firstAccessService;
 
     @BeforeEach
     void setUp() {
         output = new ByteArrayOutputStream();
         printer = new Printer(new PrintStream(output));
+        firstAccessService = new FirstAccessService(configuratorService, volunteerService);
     }
 
     @Test
@@ -47,7 +50,7 @@ class FirstAccessSetupTest {
                 "NuovaPassword!",
                 "NuovaPassword!"
         );
-        FirstAccessSetup setup = new FirstAccessSetup(configuratorService, volunteerService, reader, printer);
+        FirstAccessSetup setup = new FirstAccessSetup(firstAccessService, reader, printer);
 
         String result = setup.handleVolunteerFirstAccess("vol001");
 
@@ -67,7 +70,7 @@ class FirstAccessSetupTest {
                 "NuovaPassword!",
                 "NuovaPassword!"
         );
-        FirstAccessSetup setup = new FirstAccessSetup(configuratorService, volunteerService, reader, printer);
+        FirstAccessSetup setup = new FirstAccessSetup(firstAccessService, reader, printer);
 
         String result = setup.handleVolunteerFirstAccess("vol001");
 

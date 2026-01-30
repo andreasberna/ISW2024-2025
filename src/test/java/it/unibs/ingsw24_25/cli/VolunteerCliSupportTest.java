@@ -3,11 +3,9 @@ package it.unibs.ingsw24_25.cli;
 import it.unibs.ingsw24_25.DTO.VisitBookingDTO;
 import it.unibs.ingsw24_25.DTO.VisitOccurrenceDTO;
 import it.unibs.ingsw24_25.model.VisitStatus;
-import it.unibs.ingsw24_25.service.VolunteerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayOutputStream;
@@ -19,13 +17,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class VolunteerCliSupportTest {
 
-    @Mock
-    private VolunteerService volunteerService;
 
     private ByteArrayOutputStream output;
     private Printer printer;
@@ -59,21 +54,19 @@ class VolunteerCliSupportTest {
                 List.of (createBooking ("A100", "Luca Neri", 5, LocalDate.of (2024, 5, 4), "Tour Museo"))
         );
 
-        when (volunteerService.loadConfirmedGuidedVisits ("guide01", month)).thenReturn (List.of (second, first));
-
-        List<VisitOccurrenceDTO> visits = VolunteerCliSupport.displayConfirmedVisits (
-                volunteerService,
+        VolunteerCliSupport.displayConfirmedVisits (
                 printer,
                 "guide01",
                 month,
-                DateTimeFormatter.ofPattern ("yyyy-MM")
+                DateTimeFormatter.ofPattern ("yyyy-MM"),
+                List.of (second, first)
         );
 
-        assertThat (visits)
-                .extracting (VisitOccurrenceDTO::getId)
-                .containsExactly ("v-001", "v-002");
-
         String rendered = output.toString ();
+        int firstIndex = rendered.indexOf ("Tour Museo");
+        int secondIndex = rendered.indexOf ("Visita Castello");
+        assertThat (firstIndex).isPositive ();
+        assertThat (secondIndex).isGreaterThan (firstIndex);
         assertThat (rendered).contains ("Codici: A100");
         assertThat (rendered).contains ("Codici: B001, B002");
     }
