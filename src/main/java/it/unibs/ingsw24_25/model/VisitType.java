@@ -35,7 +35,7 @@ public class VisitType {
     private VisitState state;
     private VisitStateBehavior stateBehavior;
     private LocalDate visitDate;
-    private LocalDate enrollmentDeadline= visitDate.minusDays(3);
+    private LocalDate enrollmentDeadline;
     private int enrolled;
 
     public VisitType(String visitTitle, String visitDescription, String visitMeetLocation,
