@@ -1,2 +1,10 @@
 {
+  "territorialScope": "Comune di Brescia",
+  "maxPeoplePerSubscription": 8,
+  "excludedDates": [
+    "2026-03-19"
+  ],
+  "planningMonth": "2026-03",
+  "phase": "PLAN_GENERATED",
+  "availabilityWindowClosedOn": "2026-02-20"
 }

@@ -1,0 +1,94 @@
+{
+  "vt-castello-panorama": {
+    "id": "vt-castello-panorama",
+    "visitTitle": "Passeggiata panoramica al Castello",
+    "visitDescription": "Percorso esterno tra bastioni e punti panoramici.",
+    "visitMeetLocation": "Ingresso principale Castello",
+    "validFrom": "2026-03-01",
+    "validTo": "2026-12-31",
+    "schedules": [
+      {
+        "day": "MONDAY",
+        "startTime": "09:00",
+        "duration": "PT2H"
+      },
+      {
+        "day": "THURSDAY",
+        "startTime": "15:00",
+        "duration": "PT2H"
+      }
+    ],
+    "ticketRequired": false,
+    "minParticipants": 5,
+    "maxParticipants": 20,
+    "place": {
+      "placeTitle": "Castello di Brescia",
+      "placeDescription": "Complesso fortificato con camminamenti panoramici e aree museali.",
+      "location": "Brescia",
+      "visits": []
+    },
+    "guides": [],
+    "state": "PROPOSTA",
+    "visitDate": "2026-03-10",
+    "enrollmentDeadline": "2026-03-07",
+    "enrolled": 0
+  },
+  "vt-castello-torri": {
+    "id": "vt-castello-torri",
+    "visitTitle": "Le torri del Castello",
+    "visitDescription": "Visita storica dedicata alle torri e alle mura difensive.",
+    "visitMeetLocation": "Biglietteria Castello",
+    "validFrom": "2026-03-01",
+    "validTo": "2026-12-31",
+    "schedules": [
+      {
+        "day": "WEDNESDAY",
+        "startTime": "10:30",
+        "duration": "PT1H30M"
+      }
+    ],
+    "ticketRequired": true,
+    "minParticipants": 4,
+    "maxParticipants": 15,
+    "place": {
+      "placeTitle": "Castello di Brescia",
+      "placeDescription": "Complesso fortificato con camminamenti panoramici e aree museali.",
+      "location": "Brescia",
+      "visits": []
+    },
+    "guides": [],
+    "state": "PROPOSTA",
+    "visitDate": "2026-03-12",
+    "enrollmentDeadline": "2026-03-09",
+    "enrolled": 0
+  },
+  "vt-santagiulia-longobardi": {
+    "id": "vt-santagiulia-longobardi",
+    "visitTitle": "Percorso Longobardo a Santa Giulia",
+    "visitDescription": "Itinerario nei nuclei longobardi e nelle sezioni archeologiche.",
+    "visitMeetLocation": "Atrio Museo Santa Giulia",
+    "validFrom": "2026-03-01",
+    "validTo": "2026-12-31",
+    "schedules": [
+      {
+        "day": "FRIDAY",
+        "startTime": "14:30",
+        "duration": "PT2H"
+      }
+    ],
+    "ticketRequired": true,
+    "minParticipants": 6,
+    "maxParticipants": 25,
+    "place": {
+      "placeTitle": "Santa Giulia",
+      "placeDescription": "Museo cittadino con percorsi archeologici, longobardi e rinascimentali.",
+      "location": "Brescia",
+      "visits": []
+    },
+    "guides": [],
+    "state": "PROPOSTA",
+    "visitDate": "2026-03-14",
+    "enrollmentDeadline": "2026-03-11",
+    "enrolled": 0
+  }
+}

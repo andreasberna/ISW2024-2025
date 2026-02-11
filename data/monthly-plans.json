@@ -1,0 +1,168 @@
+{
+  "2026-03": {
+    "targetMonth": "2026-03",
+    "phase": "PLAN_GENERATED",
+    "availabilityWindowClosedOn": "2026-02-20",
+    "plannedVisits": [
+      {
+        "id": "pv-2026-03-01",
+        "date": "2026-03-03",
+        "timeSlot": {
+          "day": "TUESDAY",
+          "startTime": "09:00",
+          "duration": "PT2H"
+        },
+        "visitTypeId": "vt-castello-panorama",
+        "assignedVolunteerIds": [
+          "luca.guida"
+        ],
+        "proposable": true,
+        "status": "PROPOSED",
+        "bookings": []
+      },
+      {
+        "id": "pv-2026-03-02",
+        "date": "2026-03-05",
+        "timeSlot": {
+          "day": "THURSDAY",
+          "startTime": "15:00",
+          "duration": "PT2H"
+        },
+        "visitTypeId": "vt-castello-panorama",
+        "assignedVolunteerIds": [
+          "anna.tour"
+        ],
+        "proposable": true,
+        "status": "PROPOSED",
+        "bookings": []
+      },
+      {
+        "id": "pv-2026-03-03",
+        "date": "2026-03-10",
+        "timeSlot": {
+          "day": "TUESDAY",
+          "startTime": "10:30",
+          "duration": "PT1H30M"
+        },
+        "visitTypeId": "vt-castello-torri",
+        "assignedVolunteerIds": [
+          "luca.guida"
+        ],
+        "proposable": true,
+        "status": "PROPOSED",
+        "bookings": []
+      },
+      {
+        "id": "pv-2026-03-04",
+        "date": "2026-03-12",
+        "timeSlot": {
+          "day": "THURSDAY",
+          "startTime": "10:30",
+          "duration": "PT1H30M"
+        },
+        "visitTypeId": "vt-castello-torri",
+        "assignedVolunteerIds": [
+          "anna.tour"
+        ],
+        "proposable": true,
+        "status": "PROPOSED",
+        "bookings": []
+      },
+      {
+        "id": "pv-2026-03-05",
+        "date": "2026-03-14",
+        "timeSlot": {
+          "day": "SATURDAY",
+          "startTime": "14:30",
+          "duration": "PT2H"
+        },
+        "visitTypeId": "vt-santagiulia-longobardi",
+        "assignedVolunteerIds": [
+          "luca.guida"
+        ],
+        "proposable": true,
+        "status": "PROPOSED",
+        "bookings": []
+      },
+      {
+        "id": "pv-2026-03-06",
+        "date": "2026-03-17",
+        "timeSlot": {
+          "day": "TUESDAY",
+          "startTime": "09:00",
+          "duration": "PT2H"
+        },
+        "visitTypeId": "vt-castello-panorama",
+        "assignedVolunteerIds": [
+          "anna.tour"
+        ],
+        "proposable": true,
+        "status": "CONFIRMED",
+        "bookings": [
+          {
+            "code": "BK-0001",
+            "beneficiaryUsername": "giulia.rossi",
+            "beneficiaryName": "Giulia Rossi",
+            "participants": 3,
+            "notes": "Prenotazione gruppo famiglia"
+          },
+          {
+            "code": "BK-0002",
+            "beneficiaryUsername": "marco.bianchi",
+            "beneficiaryName": "Marco Bianchi",
+            "participants": 2,
+            "notes": "Richiesta guida in italiano"
+          }
+        ]
+      },
+      {
+        "id": "pv-2026-03-07",
+        "date": "2026-03-21",
+        "timeSlot": {
+          "day": "SATURDAY",
+          "startTime": "14:30",
+          "duration": "PT2H"
+        },
+        "visitTypeId": "vt-santagiulia-longobardi",
+        "assignedVolunteerIds": [
+          "luca.guida"
+        ],
+        "proposable": true,
+        "status": "CONFIRMED",
+        "bookings": [
+          {
+            "code": "BK-0003",
+            "beneficiaryUsername": "elena.verdi",
+            "beneficiaryName": "Elena Verdi",
+            "participants": 4,
+            "notes": "Presenza di minori"
+          },
+          {
+            "code": "BK-0004",
+            "beneficiaryUsername": "marco.bianchi",
+            "beneficiaryName": "Marco Bianchi",
+            "participants": 2,
+            "notes": "Biglietti già acquistati"
+          }
+        ]
+      },
+      {
+        "id": "pv-2026-03-08",
+        "date": "2026-03-24",
+        "timeSlot": {
+          "day": "TUESDAY",
+          "startTime": "10:30",
+          "duration": "PT1H30M"
+        },
+        "visitTypeId": "vt-castello-torri",
+        "assignedVolunteerIds": [
+          "anna.tour"
+        ],
+        "proposable": false,
+        "status": "CANCELLED",
+        "bookings": []
+      }
+    ],
+    "availabilitySnapshots": {}
+  }
+}

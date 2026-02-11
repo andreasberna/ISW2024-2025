@@ -1,2 +1,17 @@
 {
+  "giulia.rossi": {
+    "username": "giulia.rossi",
+    "password": "Giulia#2026",
+    "fullName": "Giulia Rossi"
+  },
+  "marco.bianchi": {
+    "username": "marco.bianchi",
+    "password": "Marco#2026",
+    "fullName": "Marco Bianchi"
+  },
+  "elena.verdi": {
+    "username": "elena.verdi",
+    "password": "Elena#2026",
+    "fullName": "Elena Verdi"
+  }
 }

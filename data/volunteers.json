@@ -1,2 +1,20 @@
 {
+  "luca.guida": {
+    "nickname": "luca.guida",
+    "password": "LucaPass!23",
+    "personalCredentialsDefined": true,
+    "visitsAttending": [],
+    "availabilities": {},
+    "scheduledShifts": {},
+    "active": true
+  },
+  "anna.tour": {
+    "nickname": "anna.tour",
+    "password": "AnnaPass!45",
+    "personalCredentialsDefined": true,
+    "visitsAttending": [],
+    "availabilities": {},
+    "scheduledShifts": {},
+    "active": true
+  }
 }

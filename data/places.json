@@ -1,3 +1,14 @@
 {
-
+  "Castello di Brescia": {
+    "placeTitle": "Castello di Brescia",
+    "placeDescription": "Complesso fortificato con camminamenti panoramici e aree museali.",
+    "location": "Brescia",
+    "visits": []
+  },
+  "Santa Giulia": {
+    "placeTitle": "Santa Giulia",
+    "placeDescription": "Museo cittadino con percorsi archeologici, longobardi e rinascimentali.",
+    "location": "Brescia",
+    "visits": []
+  }
 }
