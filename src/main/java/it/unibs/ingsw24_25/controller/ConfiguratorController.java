@@ -1,9 +1,6 @@
 package it.unibs.ingsw24_25.controller;
 
-import it.unibs.ingsw24_25.DTO.MonthlyPlanDTO;
-import it.unibs.ingsw24_25.DTO.PlaceDTO;
-import it.unibs.ingsw24_25.DTO.VisitTypeDTO;
-import it.unibs.ingsw24_25.DTO.VolunteerDTO;
+import it.unibs.ingsw24_25.DTO.*;
 import it.unibs.ingsw24_25.model.TimeSlot;
 import it.unibs.ingsw24_25.service.ConfiguratorService;
 
@@ -65,6 +62,9 @@ public class ConfiguratorController {
 
     public List<VisitTypeDTO> listVisitTypeByPlace(String placeId) {
         return configuratorService.listVisitTypeByPlace(placeId);
+    }
+    public List<VisitOccurrenceDTO> listPlannedVisitsWithStatus() {
+        return configuratorService.listPlannedVisitsWithStatus();
     }
 
     public List<VisitTypeDTO> listVisitType() {

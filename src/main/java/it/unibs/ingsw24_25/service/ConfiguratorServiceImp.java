@@ -1,9 +1,6 @@
 package it.unibs.ingsw24_25.service;
 
-import it.unibs.ingsw24_25.DTO.MonthlyPlanDTO;
-import it.unibs.ingsw24_25.DTO.PlaceDTO;
-import it.unibs.ingsw24_25.DTO.VisitTypeDTO;
-import it.unibs.ingsw24_25.DTO.VolunteerDTO;
+import it.unibs.ingsw24_25.DTO.*;
 import it.unibs.ingsw24_25.model.*;
 import it.unibs.ingsw24_25.repository.*;
 import it.unibs.ingsw24_25.util.AvailabilitySubmissionPolicy;
@@ -247,6 +244,7 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
             throw new IllegalArgumentException ("Nessun luogo trovato con id %s".formatted(placeId));
 
         return visitTypeRepository.findByPlace (placeId).stream ()
+                .peek (this::refreshVisitState)
                 .map (DTOMapper::visitTypeToDTO)
                 .collect(Collectors.toList());
     }
@@ -254,8 +252,39 @@ public class ConfiguratorServiceImp implements ConfiguratorService {
     @Override
     public List<VisitTypeDTO> listVisitType(){
         return visitTypeRepository.findAll ().stream ()
+                .peek (this::refreshVisitState)
                 .map (DTOMapper::visitTypeToDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<VisitOccurrenceDTO> listPlannedVisitsWithStatus() {
+        Map<String, VisitType> visitTypes = visitTypeRepository.findAll().stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(VisitType::getId, visit -> visit, (left, right) -> left));
+
+        return monthlyVisitPlanRepository.findAll().stream()
+                .filter(Objects::nonNull)
+                .flatMap(plan -> plan.getPlannedVisits().stream()
+                        .filter(Objects::nonNull)
+                        .map(visit -> DTOMapper.toVisitOccurrenceDTO(plan, visit, visitTypes.get(visit.getVisitTypeId()), false)))
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(VisitOccurrenceDTO::getDate)
+                        .thenComparing(VisitOccurrenceDTO::getStartTime, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(VisitOccurrenceDTO::getTitle, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .toList();
+    }
+
+    private void refreshVisitState(VisitType visitType) {
+        if (visitType == null) {
+            return;
+        }
+
+        VisitState previous = visitType.getState();
+        visitType.updateState(LocalDate.now());
+        if (visitType.getState() != previous) {
+            visitTypeRepository.save(visitType);
+        }
     }
 
     @Override

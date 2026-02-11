@@ -56,14 +56,54 @@ public class VolunteerServiceImp implements VolunteerService{
     public Optional<MonthlyAvailability> loadAvailability(String nickname, YearMonth month) {
         Objects.requireNonNull (month);
         Volunteer volunteer = loadVolunteer(nickname);
-        return volunteer.findAvailability (month);
+        Optional<MonthlyAvailability> direct = volunteer.findAvailability (month);
+        if (direct.isPresent()) {
+            return direct;
+        }
+
+        return monthlyVisitPlanRepository.findByMonth(month)
+                .map(MonthlyVisitPlan::getAvailabilitySnapshots)
+                .map(snapshots -> snapshots.get(volunteer.getNickname()))
+                .filter(Objects::nonNull)
+                .map(snapshot -> new MonthlyAvailability(
+                        snapshot.getReferenceMonth(),
+                        snapshot.getPreferredDays(),
+                        snapshot.getWeeklyFrequency(),
+                        snapshot.getSubmittedOn(),
+                        snapshot.isSnapshot(),
+                        snapshot.getSnapshotCapturedOn()
+                ));
     }
 
     @Override
     public List<AssignedShift> loadSchedule(String nickname, YearMonth month) {
         Objects.requireNonNull (month);
         Volunteer volunteer = loadVolunteer(nickname);
-        return volunteer.getShiftsForMonth (month);
+        List<AssignedShift> persistedShifts = volunteer.getShiftsForMonth(month);
+        if (!persistedShifts.isEmpty()) {
+            return persistedShifts;
+        }
+
+        return monthlyVisitPlanRepository.findByMonth(month)
+                .map(MonthlyVisitPlan::getPlannedVisits)
+                .orElse(List.of())
+                .stream()
+                .filter(Objects::nonNull)
+                .filter(visit -> visit.getAssignedVolunteerIds().contains(volunteer.getNickname()))
+                .map(visit -> new AssignedShift(
+                        visit.getDate(),
+                        visit.getVisitTypeId(),
+                        visit.getTimeSlot() == null
+                                ? null
+                                : new TimeSlot(
+                                visit.getTimeSlot().getDay(),
+                                visit.getTimeSlot().getStartTime(),
+                                visit.getTimeSlot().getDuration()
+                        )
+                ))
+                .sorted(Comparator.comparing(AssignedShift::getDate)
+                        .thenComparing(AssignedShift::getVisitTypeId, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .toList();
     }
 
     @Override

@@ -436,9 +436,16 @@ public class ConfiguratorCommandHandler {
     }
     private void listVisistTypeWithState() {
         try {
-            List<VisitTypeDTO> visitTypes = configuratorController.listVisitType ();
-            printer.println (Printer.VISIT_TYPE_HEADER);
-            printer.printVisitTypeList (visitTypes);
+            List<VisitOccurrenceDTO> visits = configuratorController.listPlannedVisitsWithStatus();
+            if (visits == null || visits.isEmpty()) {
+                printer.println("Nessuna visita pianificata con stato disponibile.");
+                return;
+            }
+
+            printer.println("Visite pianificate con stato:");
+            visits.stream()
+                    .map(this::formatVisitWithStatus)
+                    .forEach(printer::println);
         } catch (IllegalArgumentException ex) {
             printer.println (ERROR_PREFIX + safeMessage(ex));
         }
@@ -447,6 +454,14 @@ public class ConfiguratorCommandHandler {
         printer.println(Printer.VOLUNTEER_HEADER);
         List<VolunteerDTO> volunteers = configuratorController.listVolunteerWithVisitType ();
         printer.printVolunteerList (volunteers);
+    }
+
+    private String formatVisitWithStatus(VisitOccurrenceDTO visit) {
+        String title = visit.getTitle() == null || visit.getTitle().isBlank() ? visit.getVisitTypeId() : visit.getTitle();
+        String start = visit.getStartTime() == null ? "-" : visit.getStartTime().toString();
+        String status = visit.getStatus() == null ? "-" : visit.getStatus().name();
+        return "ID: %s | Data: %s | Ora: %s | Titolo: %s | Stato: %s"
+                .formatted(visit.getId(), visit.getDate(), start, title, status);
     }
 
     //settings methods

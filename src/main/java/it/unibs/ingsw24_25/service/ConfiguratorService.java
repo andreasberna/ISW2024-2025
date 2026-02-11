@@ -1,9 +1,6 @@
 package it.unibs.ingsw24_25.service;
 
-import it.unibs.ingsw24_25.DTO.MonthlyPlanDTO;
-import it.unibs.ingsw24_25.DTO.PlaceDTO;
-import it.unibs.ingsw24_25.DTO.VisitTypeDTO;
-import it.unibs.ingsw24_25.DTO.VolunteerDTO;
+import it.unibs.ingsw24_25.DTO.*;
 import it.unibs.ingsw24_25.model.TimeSlot;
 
 import java.time.LocalDate;
@@ -30,6 +27,8 @@ public interface ConfiguratorService extends LoginService {
     List<VisitTypeDTO> listVisitTypeByPlace(String placeId);
 
     List<VisitTypeDTO> listVisitType();
+
+    List<VisitOccurrenceDTO> listPlannedVisitsWithStatus();
 
     List<VolunteerDTO> listVolunteerWVisitType();
 

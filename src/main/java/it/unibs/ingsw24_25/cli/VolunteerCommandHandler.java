@@ -41,6 +41,7 @@ public class VolunteerCommandHandler {
     private static final String VOLUNTEER_VISIT_SELECTION_PROMPT = "Seleziona una visita per i dettagli prenotazioni (numero o \"back\"): ";
     private static final String VOLUNTEER_INVALID_VISIT_SELECTION = "Selezione non valida. Inserire un numero di visita.";
     private static final DateTimeFormatter YEAR_MONTH_INPUT_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
+    private static final DateTimeFormatter YEAR_MONTH_INPUT_FORMATTER_ALT = DateTimeFormatter.ofPattern("MM-yyyy");
 
     private final VolunteerController volunteerController;
     private final FirstAccessSetup firstAccessSetup;
@@ -296,7 +297,11 @@ public class VolunteerCommandHandler {
             try {
                 return YearMonth.parse(value, YEAR_MONTH_INPUT_FORMATTER);
             } catch (DateTimeParseException ex) {
-                printer.println(ERROR_PREFIX + MONTH_INPUT_INVALID);
+                try {
+                    return YearMonth.parse(value, YEAR_MONTH_INPUT_FORMATTER_ALT);
+                } catch (DateTimeParseException ignored) {
+                    printer.println(ERROR_PREFIX + MONTH_INPUT_INVALID);
+                }
             }
         }
     }

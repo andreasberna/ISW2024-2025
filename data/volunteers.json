@@ -4,8 +4,29 @@
     "password": "LucaPass!23",
     "personalCredentialsDefined": true,
     "visitsAttending": [],
-    "availabilities": {},
-    "scheduledShifts": {},
+    "availabilities": {
+      "2026-03": {
+        "referenceMonth": "2026-03",
+        "preferredDays": ["TUESDAY", "SATURDAY"],
+        "weeklyFrequency": 2,
+        "submittedOn": "2026-02-12",
+        "snapshot": false,
+        "snapshotCapturedOn": null
+      }
+    },
+    "scheduledShifts": {
+      "2026-03": [
+        {
+          "date": "2026-03-10",
+          "visitTypeId": "vt-castello-torri",
+          "slot": {
+            "day": "TUESDAY",
+            "startTime": "10:30",
+            "duration": "PT1H30M"
+          }
+        }
+      ]
+    },
     "active": true
   },
   "anna.tour": {
@@ -13,8 +34,29 @@
     "password": "AnnaPass!45",
     "personalCredentialsDefined": true,
     "visitsAttending": [],
-    "availabilities": {},
-    "scheduledShifts": {},
+    "availabilities": {
+      "2026-03": {
+        "referenceMonth": "2026-03",
+        "preferredDays": ["THURSDAY"],
+        "weeklyFrequency": 1,
+        "submittedOn": "2026-02-11",
+        "snapshot": false,
+        "snapshotCapturedOn": null
+      }
+    },
+    "scheduledShifts": {
+      "2026-03": [
+        {
+          "date": "2026-03-17",
+          "visitTypeId": "vt-castello-panorama",
+          "slot": {
+            "day": "TUESDAY",
+            "startTime": "09:00",
+            "duration": "PT2H"
+          }
+        }
+      ]
+    },
     "active": true
   }
 }
