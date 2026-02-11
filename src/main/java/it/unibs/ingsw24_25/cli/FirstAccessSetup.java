@@ -50,17 +50,17 @@ public class FirstAccessSetup {
         return new FirstAccessService.ConfiguratorFirstAccessView () {
             @Override
             public void showSeparator() {
-                printer.print(MENU_SEPARATOR);
+                printer.println(MENU_SEPARATOR);
             }
 
             @Override
             public void showIntro() {
-                printer.print(INTRO_MESSAGE);
+                printer.println(INTRO_MESSAGE);
             }
 
             @Override
             public void showCompletion() {
-                printer.print(COMPLETION_MESSAGE);
+                printer.println(COMPLETION_MESSAGE);
             }
 
             @Override

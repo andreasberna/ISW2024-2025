@@ -155,20 +155,6 @@ public class ConfiguratorCredentialManager {
             return Optional.of(sanitizedNickname);
         }
 
-        if (sanitizedNickname.length() <= 1) {
-            return Optional.empty();
-        }
-
-        for (int index = 0; index < sanitizedNickname.length(); index++) {
-            String candidate = sanitizedNickname.substring(0, index) + sanitizedNickname.substring(index + 1);
-            if (candidate.isBlank()) {
-                continue;
-            }
-            if (provisionedCredentialsRepository.hasConfiguratorCredential(candidate)) {
-                return Optional.of(candidate);
-            }
-        }
-
         return Optional.empty();
     }
 

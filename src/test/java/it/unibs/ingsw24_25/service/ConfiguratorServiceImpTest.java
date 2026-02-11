@@ -171,7 +171,7 @@ class ConfiguratorServiceImpTest {
             when(provisionedCredentialsRepository.hasConfiguratorCredential("config")).thenReturn(true);
             when(provisionedCredentialsRepository.findConfiguratorPassword("config")).thenReturn(Optional.of("psswrd"));
 
-            assertThatThrownBy(() -> service.verifyDefaultCredentials("comnfig", "wrong"))
+            assertThatThrownBy(() -> service.verifyDefaultCredentials("config", "wrong"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("non valide");
         }

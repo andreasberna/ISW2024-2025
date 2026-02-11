@@ -183,7 +183,10 @@ public class ConfiguratorCommandHandler {
     }
 
     private boolean authenticateCOnfigurator() {
-        if (configuratorController.listConfigurators ().isEmpty ()) return true;
+        if (configuratorController.listConfigurators ().isEmpty ()){
+            printer.println (ERROR_PREFIX + CONFIGURATOR_LOGIN_UNAVAILABLE);
+            return false;
+        };
 
         printer.println (MENU_SEPARATOR);
         printer.println (CONFIGURATOR_LOGIN_HEADER);
