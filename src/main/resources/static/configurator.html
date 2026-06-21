@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuratore - Tour Guide Planner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script>
+        const userRole = localStorage.getItem('userRole');
+        if (userRole !== 'CONFIGURATOR') {
+            window.location.href = '/index.html';
+        }
+    </script>
+    <style>
+        body { background-color: #f8f9fa; }
+        .section-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .form-section { border-right: 1px solid #dee2e6; }
+        @media (max-width: 768px) {
+            .form-section { border-right: none; border-bottom: 1px solid #dee2e6; padding-bottom: 1rem; margin-bottom: 1rem; }
+        }
+        .alert-fixed {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            display: none;
+            min-width: 300px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Tour Guide Planner - Area Gestionale</a>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-primary fs-6 d-flex align-items-center me-3">Ruolo: Configuratore</span>
+                <button id="logoutButton" class="btn btn-outline-light">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div id="successAlert" class="alert alert-success alert-dismissible fade show alert-fixed" role="alert">
+        <span id="successMessage">Operazione completata con successo!</span>
+        <button type="button" class="btn-close" onclick="hideAlert('successAlert')" aria-label="Close"></button>
+    </div>
+    <div id="errorAlert" class="alert alert-danger alert-dismissible fade show alert-fixed" role="alert">
+        <span id="errorMessage">Si è verificato un errore.</span>
+        <button type="button" class="btn-close" onclick="hideAlert('errorAlert')" aria-label="Close"></button>
+    </div>
+
+    <div class="container mt-4">
+
+        <div class="section-container">
+            <h2 class="h4 mb-4 text-primary border-bottom pb-2">Impostazioni dell'Organizzazione</h2>
+            <div id="territorialScopeSection"></div>
+        </div>
+
+        <div class="section-container">
+            <h2 class="h4 mb-4 text-primary border-bottom pb-2">Pianificazione Visite Mensili</h2>
+            <div class="row">
+                <div class="col-md-4 form-section">
+                    <h5 class="mb-3">Nuovo Piano Mensile</h5>
+                    <form id="monthlyPlanForm">
+                        <div class="mb-3">
+                            <label for="planMonth" class="form-label">Mese e Anno</label>
+                            <input type="month" class="form-control" id="planMonth" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Inizializza Piano</button>
+                    </form>
+                </div>
+                <div class="col-md-8">
+                    <h5 class="mb-3">Piani Mensili Attivi</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered align-middle" id="monthlyPlansTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Periodo</th>
+                                    <th>Fase</th>
+                                    <th class="text-center">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="sezione-dettaglio-visite" class="card d-none section-container">
+            <div class="card-header">
+                Dettaglio Visite Istanziate - Piano <span id="dettaglio-periodo"></span>
+            </div>
+            <div class="card-body">
+                <div id="no-visits-alert" class="alert alert-warning d-none">Nessuna visita ancora generata per questo piano. Chiudere la raccolta disponibilità il giorno 16 per istanziare le visite</div>
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered align-middle" id="visitsDetailTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Data</th>
+                                <th>Ora</th>
+                                <th>Titolo Visita</th>
+                                <th>Guida Assegnata</th>
+                                <th>Stato</th>
+                                <th>Posti</th>
+                                <th class="text-center">Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    <!-- Modal assegnazione volontario -->
+    <div class="modal fade" id="assignVolunteerModal" tabindex="-1" aria-labelledby="assignVolunteerModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assignVolunteerModalLabel">Assegna Volontario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small" id="assignVisitInfo"></p>
+                    <div id="assignNoVolunteers" class="alert alert-warning d-none">Nessun volontario ha inviato disponibilità per questo giorno.</div>
+                    <div class="mb-3" id="assignSelectWrapper">
+                        <label for="assignVolunteerSelect" class="form-label">Seleziona Volontario disponibile</label>
+                        <select class="form-select" id="assignVolunteerSelect">
+                            <option value="">-- Rimuovi assegnazione --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmAssignVolunteer()">Salva</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <div class="section-container">
+            <h2 class="h4 mb-4 text-primary border-bottom pb-2">Gestione Luoghi (Place)</h2>
+            <div class="row">
+                <div class="col-md-4 form-section">
+                    <h5 class="mb-3">Nuovo Luogo</h5>
+                    <form id="placeForm">
+                        <div class="mb-3">
+                            <label for="placeName" class="form-label">Nome Luogo</label>
+                            <input type="text" class="form-control" id="placeName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="placeLocation" class="form-label">Località</label>
+                            <input type="text" class="form-control" id="placeLocation" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Crea Luogo</button>
+                    </form>
+                </div>
+                <div class="col-md-8">
+                    <h5 class="mb-3">Luoghi Attivi</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered align-middle" id="placesTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome</th>
+                                    <th>Località</th>
+                                    <th class="text-center">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-container">
+            <h2 class="h4 mb-4 text-primary border-bottom pb-2">Gestione Tipologie di Visita</h2>
+            <div class="row">
+                <div class="col-md-5 form-section">
+                    <h5 class="mb-3">Nuova Tipologia</h5>
+                    <form id="visitTypeForm">
+                        <div class="mb-3">
+                            <label for="visitPlaceId" class="form-label">Luogo Associato</label>
+                            <select class="form-select" id="visitPlaceId" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="visitTitle" class="form-label">Titolo</label>
+                            <input type="text" class="form-control" id="visitTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="visitDescription" class="form-label">Descrizione</label>
+                            <textarea class="form-control" id="visitDescription" rows="2" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="visitMeetingPoint" class="form-label">Punto di Incontro</label>
+                            <input type="text" class="form-control" id="visitMeetingPoint" required>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">Orari Ricorrenti <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addScheduleEntry()">+ Aggiungi Orario</button>
+                            </div>
+                            <div id="schedulesContainer">
+                                <!-- entries added dynamically -->
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label for="visitMinParticipants" class="form-label">Min Partecipanti</label>
+                                <input type="number" class="form-control" id="visitMinParticipants" min="1" value="1" required>
+                            </div>
+                            <div class="col-6">
+                                <label for="visitMaxParticipants" class="form-label">Max Partecipanti</label>
+                                <input type="number" class="form-control" id="visitMaxParticipants" min="1" value="10" required>
+                            </div>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="visitTicketRequired">
+                            <label class="form-check-label" for="visitTicketRequired">Biglietto Richiesto</label>
+                        </div>
+                        <div class="mb-3">
+                            <label for="visitStartDate" class="form-label">Data di Inizio</label>
+                            <input type="date" class="form-control" id="visitStartDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="visitEndDate" class="form-label">Data di Fine</label>
+                            <input type="date" class="form-control" id="visitEndDate" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Crea Tipologia</button>
+                    </form>
+                </div>
+                <div class="col-md-7">
+                    <h5 class="mb-3">Tipologie Esistenti</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered align-middle" id="visitsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Titolo</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-container">
+            <h2 class="h4 mb-4 text-primary border-bottom pb-2">Cambio Password</h2>
+            <div class="card">
+                <div class="card-body">
+                    <form id="changePasswordForm">
+                        <div class="mb-3">
+                            <label for="oldPassword" class="form-label">Vecchia Password</label>
+                            <input type="password" class="form-control" id="oldPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">Nuova Password</label>
+                            <input type="password" class="form-control" id="newPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Cambia Password</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const API_BASE = '/api/configurator';
+
+        // Inject Basic Auth header on every API call using credentials stored at login
+        (function() {
+            const _fetch = window.fetch.bind(window);
+            window.fetch = function(url, options = {}) {
+                const u = localStorage.getItem('username');
+                const p = localStorage.getItem('password');
+                if (u && p) {
+                    options = {
+                        ...options,
+                        headers: { 'Authorization': 'Basic ' + btoa(u + ':' + p), ...(options.headers || {}) }
+                    };
+                }
+                return _fetch(url, options);
+            };
+        })();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTerritorialScope();
+            loadMonthlyPlans();
+            loadPlaces();
+            loadVisitTypes();
+
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('visitStartDate').value = tomorrow.toISOString().split('T')[0];
+
+            const nextYear = new Date();
+            nextYear.setFullYear(nextYear.getFullYear() + 1);
+            document.getElementById('visitEndDate').value = nextYear.toISOString().split('T')[0];
+
+            document.getElementById('monthlyPlanForm').addEventListener('submit', handleCreateMonthlyPlan);
+            document.getElementById('placeForm').addEventListener('submit', handleCreatePlace);
+            document.getElementById('visitTypeForm').addEventListener('submit', handleCreateVisitType);
+            document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
+            document.getElementById('logoutButton').addEventListener('click', () => {
+                localStorage.clear();
+                window.location.href = '/index.html';
+            });
+        });
+
+        function showAlert(type, message) {
+            const alertId = type === 'success' ? 'successAlert' : 'errorAlert';
+            const msgId = type === 'success' ? 'successMessage' : 'errorMessage';
+            document.getElementById(msgId).textContent = message;
+            const alertEl = document.getElementById(alertId);
+            alertEl.style.display = 'block';
+            if (type === 'success') {
+                setTimeout(() => hideAlert(alertId), 3000);
+            }
+        }
+
+        function hideAlert(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        async function handleResponse(response) {
+            if (!response.ok) {
+                let errorMsg;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.message || errorData.error || `Errore ${response.status}`;
+                } catch (e) {
+                    errorMsg = `Errore ${response.status}: ${response.statusText}`;
+                }
+                throw new Error(errorMsg);
+            }
+            if (response.status === 204) return null;
+            const text = await response.text();
+            try {
+                return text ? JSON.parse(text) : null;
+            } catch (e) {
+                return text;
+            }
+        }
+
+        async function loadTerritorialScope() {
+            try {
+                const response = await fetch(`${API_BASE}/settings`);
+                const settings = await handleResponse(response);
+                const section = document.getElementById('territorialScopeSection');
+                if (settings && settings.territorialScope) {
+                    section.innerHTML = `<p>Ambito territoriale: <strong>${settings.territorialScope}</strong></p>`;
+                } else {
+                    section.innerHTML = `
+                        <form id="territorialScopeForm">
+                            <div class="mb-3">
+                                <label for="scope" class="form-label">Definisci Ambito Territoriale</label>
+                                <input type="text" class="form-control" id="scope" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Imposta Ambito</button>
+                        </form>
+                    `;
+                    document.getElementById('territorialScopeForm').addEventListener('submit', handleSetTerritorialScope);
+                }
+            } catch (error) {
+                if (error.message.includes('404')) {
+                    const section = document.getElementById('territorialScopeSection');
+                    section.innerHTML = `
+                        <form id="territorialScopeForm">
+                            <div class="mb-3">
+                                <label for="scope" class="form-label">Definisci Ambito Territoriale</label>
+                                <input type="text" class="form-control" id="scope" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Imposta Ambito</button>
+                        </form>
+                    `;
+                    document.getElementById('territorialScopeForm').addEventListener('submit', handleSetTerritorialScope);
+                } else {
+                    showAlert('error', 'Impossibile caricare le impostazioni: ' + error.message);
+                }
+            }
+        }
+
+        async function handleSetTerritorialScope(event) {
+            event.preventDefault();
+            const scope = document.getElementById('scope').value;
+            try {
+                const response = await fetch(`${API_BASE}/settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scope })
+                });
+                await handleResponse(response);
+                showAlert('success', 'Ambito territoriale impostato con successo!');
+                await loadTerritorialScope();
+            } catch (error) {
+                showAlert('error', 'Errore durante l\'impostazione dell\'ambito: ' + error.message);
+            }
+        }
+
+        async function loadMonthlyPlans() {
+            try {
+                const response = await fetch(`${API_BASE}/plans`);
+                const plans = await handleResponse(response);
+                const tbody = document.querySelector('#monthlyPlansTable tbody');
+                tbody.innerHTML = '';
+                plans.forEach(plan => {
+                    const tr = document.createElement('tr');
+                    let displayMonth = plan.targetMonth;
+                    if (plan.targetMonth) {
+                        try {
+                           const parts = plan.targetMonth.split('-');
+                           if(parts.length === 2) {
+                               displayMonth = `${parts[1]}/${parts[0]}`;
+                           }
+                        } catch(e) {}
+                    }
+
+                    tr.innerHTML = `
+                        <td>${plan.id}</td>
+                        <td>${displayMonth}</td>
+                        <td>${plan.phase}</td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-info me-2" onclick="apriPiano(${plan.id}, '${displayMonth}')">Apri Piano</button>
+                            <button type="button" class="btn btn-sm btn-success" onclick="publishPlan(${plan.id})" ${plan.phase !== 'PIANIFICAZIONE_COMPLETATA' ? 'disabled' : ''}>Pubblica</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                showAlert('error', 'Impossibile caricare i piani mensili: ' + error.message);
+            }
+        }
+
+        async function handleCreateMonthlyPlan(event) {
+            event.preventDefault();
+            const month = document.getElementById('planMonth').value;
+            try {
+                const payload = { targetMonth: month };
+                const response = await fetch(`${API_BASE}/plans`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                await handleResponse(response);
+                showAlert('success', 'Piano mensile inizializzato con successo!');
+                document.getElementById('monthlyPlanForm').reset();
+                await loadMonthlyPlans();
+            } catch (error) {
+                showAlert('error', 'Errore durante l\'inizializzazione del piano: ' + error.message);
+            }
+        }
+
+        async function publishPlan(id) {
+            if (!confirm('Sei sicuro di voler pubblicare questo piano?')) return;
+            try {
+                const response = await fetch(`${API_BASE}/plans/${id}/publish`, { method: 'POST' });
+                await handleResponse(response);
+                showAlert('success', 'Piano pubblicato con successo!');
+                await loadMonthlyPlans();
+            } catch (error) {
+                showAlert('error', 'Impossibile pubblicare il piano: ' + error.message);
+            }
+        }
+
+        let currentPlanId = null;
+        let assigningVisitId = null;
+
+        async function apriPiano(planId, periodo) {
+            currentPlanId = planId;
+            document.getElementById('dettaglio-periodo').textContent = periodo;
+            const detailSection = document.getElementById('sezione-dettaglio-visite');
+            detailSection.classList.remove('d-none');
+            await loadPlanVisits(planId);
+        }
+
+        async function loadPlanVisits(planId) {
+            const tableBody = document.querySelector('#visitsDetailTable tbody');
+            const noVisitsAlert = document.getElementById('no-visits-alert');
+            const table = document.querySelector('#visitsDetailTable');
+
+            try {
+                const response = await fetch(`${API_BASE}/plans/${planId}/visits`);
+                const visits = await handleResponse(response);
+
+                tableBody.innerHTML = '';
+
+                if (visits.length === 0) {
+                    table.classList.add('d-none');
+                    noVisitsAlert.classList.remove('d-none');
+                } else {
+                    table.classList.remove('d-none');
+                    noVisitsAlert.classList.add('d-none');
+                    visits.sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.startTime || '').localeCompare(b.startTime || ''));
+                    visits.forEach(visit => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${visit.date || 'N/D'}</td>
+                            <td>${visit.startTime || 'N/D'}</td>
+                            <td>${visit.title || 'N/D'}</td>
+                            <td id="volunteer-cell-${visit.id}">${visit.volunteerNickname || '<span class="text-muted fst-italic">Non assegnato</span>'}</td>
+                            <td>${visit.status || 'N/D'}</td>
+                            <td>${visit.bookedParticipants || 0} / ${visit.maxParticipants || 'N/D'}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="openAssignModal(${visit.id}, '${visit.date}', '${visit.title || ''}')">
+                                    Assegna Guida
+                                </button>
+                            </td>
+                        `;
+                        tableBody.appendChild(tr);
+                    });
+                }
+            } catch (error) {
+                showAlert('error', 'Impossibile caricare i dettagli delle visite: ' + error.message);
+                table.classList.add('d-none');
+                noVisitsAlert.classList.remove('d-none');
+                noVisitsAlert.textContent = 'Errore nel caricamento delle visite.';
+            }
+        }
+
+        async function openAssignModal(visitId, visitDate, visitTitle) {
+            assigningVisitId = visitId;
+            document.getElementById('assignVisitInfo').textContent = `Visita: ${visitTitle} — Data: ${visitDate}`;
+            const select = document.getElementById('assignVolunteerSelect');
+            const noVolunteers = document.getElementById('assignNoVolunteers');
+            const selectWrapper = document.getElementById('assignSelectWrapper');
+            select.innerHTML = '<option value="">-- Rimuovi assegnazione --</option>';
+
+            try {
+                const response = await fetch(`${API_BASE}/planned-visits/${visitId}/available-volunteers`);
+                const volunteers = await handleResponse(response);
+                if (volunteers.length === 0) {
+                    noVolunteers.classList.remove('d-none');
+                    selectWrapper.classList.add('d-none');
+                } else {
+                    noVolunteers.classList.add('d-none');
+                    selectWrapper.classList.remove('d-none');
+                    volunteers.forEach(v => {
+                        const opt = document.createElement('option');
+                        opt.value = v.nickname;
+                        opt.textContent = v.nickname;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (error) {
+                showAlert('error', 'Errore nel caricamento dei volontari: ' + error.message);
+                return;
+            }
+
+            new bootstrap.Modal(document.getElementById('assignVolunteerModal')).show();
+        }
+
+        async function confirmAssignVolunteer() {
+            const nickname = document.getElementById('assignVolunteerSelect').value;
+            try {
+                const response = await fetch(`${API_BASE}/planned-visits/${assigningVisitId}/volunteer`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname })
+                });
+                await handleResponse(response);
+                bootstrap.Modal.getInstance(document.getElementById('assignVolunteerModal')).hide();
+                showAlert('success', nickname ? `Guida "${nickname}" assegnata con successo!` : 'Assegnazione rimossa.');
+                await loadPlanVisits(currentPlanId);
+            } catch (error) {
+                showAlert('error', 'Errore durante l\'assegnazione: ' + error.message);
+            }
+        }
+
+        async function loadPlaces() {
+            try {
+                const response = await fetch(`${API_BASE}/places`);
+                const places = await handleResponse(response);
+                const tbody = document.querySelector('#placesTable tbody');
+                tbody.innerHTML = '';
+                const placeSelect = document.getElementById('visitPlaceId');
+                placeSelect.innerHTML = '<option value="">Seleziona un luogo...</option>';
+                places.forEach(place => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${place.id}</td>
+                        <td>${place.placeTitle}</td>
+                        <td>${place.location || 'N/D'}</td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="deletePlace('${place.id}')">Elimina</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                    const option = document.createElement('option');
+                    option.value = place.id;
+                    option.textContent = place.placeTitle;
+                    placeSelect.appendChild(option);
+                });
+            } catch (error) {
+                showAlert('error', 'Impossibile caricare i luoghi: ' + error.message);
+            }
+        }
+
+        async function handleCreatePlace(event) {
+            event.preventDefault();
+            const payload = {
+                title: document.getElementById('placeName').value,
+                location: document.getElementById('placeLocation').value
+            };
+            try {
+                const response = await fetch(`${API_BASE}/places`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                await handleResponse(response);
+                showAlert('success', 'Luogo creato con successo!');
+                document.getElementById('placeForm').reset();
+                await loadPlaces();
+            } catch (error) {
+                showAlert('error', 'Errore durante la creazione del luogo: ' + error.message);
+            }
+        }
+
+        async function deletePlace(id) {
+            if (!confirm('Sei sicuro di voler eliminare questo luogo?')) return;
+            try {
+                await fetch(`${API_BASE}/places/${id}`, { method: 'DELETE' });
+                showAlert('success', 'Luogo eliminato con successo!');
+                await loadPlaces();
+            } catch (error) {
+                showAlert('error', 'Impossibile eliminare il luogo: ' + error.message);
+            }
+        }
+
+        async function loadVisitTypes() {
+            try {
+                const response = await fetch(`${API_BASE}/visits`);
+                const visits = await handleResponse(response);
+                const tbody = document.querySelector('#visitsTable tbody');
+                tbody.innerHTML = '';
+                visits.forEach(visit => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${visit.id}</td>
+                        <td>${visit.title}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                showAlert('error', 'Impossibile caricare le tipologie di visita: ' + error.message);
+            }
+        }
+
+        let scheduleCount = 0;
+
+        function addScheduleEntry() {
+            scheduleCount++;
+            const id = scheduleCount;
+            const container = document.getElementById('schedulesContainer');
+            const entry = document.createElement('div');
+            entry.className = 'border rounded p-2 mb-2';
+            entry.id = `schedule-entry-${id}`;
+            entry.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted">Orario #${id}</small>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0" onclick="removeScheduleEntry(${id})">Rimuovi</button>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label form-label-sm mb-1">Giorno della Settimana</label>
+                    <select class="form-select form-select-sm" id="schedule-day-${id}" required>
+                        <option value="MONDAY">Lunedì</option>
+                        <option value="TUESDAY">Martedì</option>
+                        <option value="WEDNESDAY">Mercoledì</option>
+                        <option value="THURSDAY">Giovedì</option>
+                        <option value="FRIDAY">Venerdì</option>
+                        <option value="SATURDAY">Sabato</option>
+                        <option value="SUNDAY">Domenica</option>
+                    </select>
+                </div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label form-label-sm mb-1">Orario Inizio</label>
+                        <input type="time" class="form-control form-control-sm" id="schedule-time-${id}" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label form-label-sm mb-1">Durata (min)</label>
+                        <input type="number" class="form-control form-control-sm" id="schedule-duration-${id}" min="15" max="480" value="60" required>
+                    </div>
+                </div>
+            `;
+            container.appendChild(entry);
+        }
+
+        function removeScheduleEntry(id) {
+            const entry = document.getElementById(`schedule-entry-${id}`);
+            if (entry) entry.remove();
+        }
+
+        function collectSchedules() {
+            const container = document.getElementById('schedulesContainer');
+            const entries = container.querySelectorAll('[id^="schedule-entry-"]');
+            const schedules = [];
+            for (const entry of entries) {
+                const entryId = entry.id.replace('schedule-entry-', '');
+                const dayEl = document.getElementById(`schedule-day-${entryId}`);
+                const timeEl = document.getElementById(`schedule-time-${entryId}`);
+                const durEl = document.getElementById(`schedule-duration-${entryId}`);
+                if (!dayEl || !timeEl || !durEl || !timeEl.value) continue;
+                schedules.push({
+                    dayOfWeek: dayEl.value,
+                    startTime: timeEl.value + ':00',
+                    durationInMinutes: parseInt(durEl.value, 10)
+                });
+            }
+            return schedules;
+        }
+
+        async function handleCreateVisitType(event) {
+            event.preventDefault();
+            const schedules = collectSchedules();
+            if (schedules.length === 0) {
+                showAlert('error', 'È necessario specificare almeno un orario.');
+                return;
+            }
+            const minP = parseInt(document.getElementById('visitMinParticipants').value, 10);
+            const maxP = parseInt(document.getElementById('visitMaxParticipants').value, 10);
+            if (minP > maxP) {
+                showAlert('error', 'Il numero minimo di partecipanti non può superare il massimo.');
+                return;
+            }
+            const payload = {
+                placeId: document.getElementById('visitPlaceId').value,
+                title: document.getElementById('visitTitle').value,
+                description: document.getElementById('visitDescription').value,
+                meetingPoint: document.getElementById('visitMeetingPoint').value,
+                schedules,
+                ticketRequired: document.getElementById('visitTicketRequired').checked,
+                minParticipants: minP,
+                maxParticipants: maxP,
+                startDate: document.getElementById('visitStartDate').value,
+                endDate: document.getElementById('visitEndDate').value
+            };
+            try {
+                const response = await fetch(`${API_BASE}/visits`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                await handleResponse(response);
+                showAlert('success', 'Tipologia di visita creata con successo!');
+                document.getElementById('visitTypeForm').reset();
+                document.getElementById('schedulesContainer').innerHTML = '';
+                scheduleCount = 0;
+                await loadVisitTypes();
+            } catch (error) {
+                showAlert('error', 'Errore durante la creazione della visita: ' + error.message);
+            }
+        }
+
+        async function handleChangePassword(event) {
+            event.preventDefault();
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const username = localStorage.getItem('username');
+            try {
+                const response = await fetch(`${API_BASE}/change-password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, oldPassword, newPassword })
+                });
+                await handleResponse(response);
+                showAlert('success', 'Password cambiata con successo!');
+                document.getElementById('changePasswordForm').reset();
+            } catch (error) {
+                showAlert('error', 'Errore durante il cambio password: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,11 +1,11 @@
 package it.unibs.ingsw24_25.util;
 
 import it.unibs.ingsw24_25.DTO.*;
+import it.unibs.ingsw24_25.DTO.response.PlaceResponse;
+import it.unibs.ingsw24_25.DTO.response.VolunteerResponse;
 import it.unibs.ingsw24_25.model.*;
 
-import java.time.format.TextStyle;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -15,49 +15,21 @@ public final class DTOMapper {
     private DTOMapper() {
     }
 
-    public static PlaceDTO placeToDTO(Place p){
-        return new PlaceDTO (p.getPlaceTitle (), p.getPlaceDescription (), p.getLocation ());
+    public static PlaceResponse placeToDTO(Place p){
+        return new PlaceResponse (p.getId(), p.getPlaceTitle (), p.getPlaceDescription (), p.getLocation ());
     }
 
-    public static VisitTypeDTO visitTypeToDTO(VisitType vt){
-        String daySummary = summarizeDays(vt.getSchedules ());
-        String start = startTimeString (vt);
-        String end = endTimeString (vt);
-        int duration = durationMinutes (vt);
-        return new VisitTypeDTO (
-                vt.getId (), vt.getVisitTitle (), daySummary, start, end,
-                duration, vt.getTicketRequired (),
-                vt.getMinParticipants (), vt.getMaxParticipants (), vt.getPlace ().getPlaceTitle (), vt.getState ());
-
+    public static VolunteerResponse volunteerToDTO(Volunteer v){
+        return new VolunteerResponse(v.getNickname(), v.isActive(), v.isFirstAccessPending());
     }
 
-    public static VolunteerDTO volunteerToDTO(Volunteer v){
-        List<String> titles = v.getVisitsAttending ().stream().
-                map(VisitType::getVisitTitle)
-                .toList ();
-
-        List<VolunteerAvailabilityDTO> availabilityDTOs = v.getAvailabilities ().entrySet ().stream ()
-                .sorted (java.util.Map.Entry.comparingByKey ())
-                .map (entry -> new VolunteerAvailabilityDTO(
-                        entry.getKey (),
-                        entry.getValue ().getPreferredDays ().stream ().toList (),
-                        entry.getValue ().getWeeklyFrequency (),
-                        entry.getValue ().getSubmittedOn ()
-                ))
-                .toList ();
-
-        List<AssignedShiftDTO> shiftsDTOs = v.getScheduledShifts ().entrySet ().stream ()
-                .flatMap (entry -> entry.getValue ().stream ()
-                        .map(shift -> new AssignedShiftDTO(
-                                entry.getKey (),
-                                shift.getDate (),
-                                shift.getVisitTypeId (),
-                                shift.getSlot ()
-                        )))
-                .sorted((left, right) -> compareShift(left, right))
-                .toList ();
-
-        return new VolunteerDTO (v.getNickname (), v.getPassword (), v.isFirstAccessPending (), titles, availabilityDTOs, shiftsDTOs);
+    public static AssignedShiftDTO toAssignedShiftDTO(AssignedShift shift) {
+        return new AssignedShiftDTO(
+                shift.getMonth(),
+                shift.getDate(),
+                shift.getVisitTypeId(),
+                shift.getSlot()
+        );
     }
 
     public static MonthlyPlanDTO planToDTO(MonthlyVisitPlan plan, List<VisitType> visitTypes) {
@@ -70,24 +42,17 @@ public final class DTOMapper {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(VisitType::getId, visitType -> visitType, (left, right) -> left));
 
-        List<PlannedVisitDTO> plannedVisits = plan.getPlannedVisits().stream()
+        List<PlannedVisitDTO> plannedVisits = plan.getVisits().stream()
                 .filter(Objects::nonNull)
-                .map(visit -> toPlannedVisitDTO(plan, visit, visitTypeMap.get(visit.getVisitTypeId())))
-                .sorted(DTOMapper::comparePlannedVisits)
-                .toList();
-
-        List<PlanAvailabilityDTO> availabilitySnapshots = plan.getAvailabilitySnapshots().entrySet().stream()
-                .map(entry -> toPlanAvailabilityDTO(entry.getKey(), entry.getValue()))
-                .filter(Objects::nonNull)
-                .sorted((left, right) -> left.getVolunteerNickname().compareToIgnoreCase(right.getVolunteerNickname()))
-                .toList();
+                .map(DTOMapper::toPlannedVisitDTO)
+                .collect(Collectors.toList());
 
         return new MonthlyPlanDTO(
                 plan.getTargetMonth(),
                 plan.getPhase(),
-                plan.getAvailabilityWindowClosedOn(),
+                null,
                 plannedVisits,
-                availabilitySnapshots
+                null
         );
     }
 
@@ -98,125 +63,51 @@ public final class DTOMapper {
         if (plannedVisit == null) {
             return null;
         }
-        TimeSlot slot = plannedVisit.getTimeSlot();
+
+        int bookedParticipants = plannedVisit.countBookedParticipants();
+
         List<VisitBookingDTO> bookingDTOs = includeBookings
                 ? plannedVisit.getBookings().stream()
-                .map(booking -> new VisitBookingDTO(
-                        booking.getCode(),
-                        booking.getBeneficiaryName(),
-                        booking.getParticipants(),
-                        booking.getNotes(),
-                        plannedVisit.getDate (),
-                        visitType != null ? visitType.getVisitTitle () : plannedVisit.getVisitTypeId (),
-                        plannedVisit.getStatus ()
-                ))
-                .toList()
+                        .map(b -> new VisitBookingDTO(
+                                b.getCode(),
+                                b.getBeneficiaryName(),
+                                b.getParticipants(),
+                                b.getNotes(),
+                                plannedVisit.getVisitDate(),
+                                visitType != null ? visitType.getVisitTitle() : "",
+                                plannedVisit.getStatus()))
+                        .collect(Collectors.toList())
                 : List.of();
 
         return new VisitOccurrenceDTO(
-                plannedVisit.getId(),
+                plannedVisit.getId().toString(),
                 plan.getTargetMonth(),
-                plannedVisit.getDate(),
-                slot != null ? slot.getStartTime() : null,
-                visitType != null ? visitType.getVisitTitle() : plannedVisit.getVisitTypeId(),
-                visitType != null ? visitType.getVisitDescription() : "",
-                visitType != null ? visitType.getVisitMeetLocation() : "",
-                visitType != null && Boolean.TRUE.equals(visitType.getTicketRequired()),
+                plannedVisit.getVisitDate(),
+                plannedVisit.getVisitTime(),
+                visitType != null ? visitType.getVisitTitle() : plannedVisit.getVisitType().getId(),
+                visitType != null ? visitType.getDescription() : "",
+                visitType != null ? visitType.getMeetLocation() : "",
+                visitType != null && visitType.isTicketRequired(),
                 visitType != null ? visitType.getMinParticipants() : 0,
                 visitType != null ? visitType.getMaxParticipants() : 0,
-                plannedVisit.getBookedParticipants(),
+                bookedParticipants,
                 plannedVisit.getStatus(),
-                plannedVisit.getVisitTypeId(),
-                bookingDTOs
+                plannedVisit.getVisitType().getId(),
+                bookingDTOs,
+                plan.getId(),
+                visitType != null ? visitType.getVisitTitle() : null,
+                plannedVisit.getVolunteer() != null ? plannedVisit.getVolunteer().getNickname() : null
         );
     }
 
-    private static PlannedVisitDTO toPlannedVisitDTO(MonthlyVisitPlan plan,
-                                                     PlannedVisit visit,
-                                                     VisitType visitType) {
-        TimeSlot slot = visit.getTimeSlot();
+    private static PlannedVisitDTO toPlannedVisitDTO(PlannedVisit visit) {
         return new PlannedVisitDTO(
-                plan.getTargetMonth(),
-                visit.getDate(),
-                slot != null && slot.getDay() != null ? slot.getDay() : visit.getDate().getDayOfWeek(),
-                slot != null ? slot.getStartTime() : null,
-                slot != null && slot.getDuration() != null ? slot.getDuration().toMinutes() : 0,
-                visit.getVisitTypeId(),
-                visitType != null && visitType.getVisitTitle() != null ? visitType.getVisitTitle() : visit.getVisitTypeId(),
-                visit.isProposable(),
-                visit.getAssignedVolunteerIds()
+                visit.getId(),
+                visit.getVisitType().getVisitTitle(),
+                visit.getVolunteer() != null ? visit.getVolunteer().getNickname() : null,
+                visit.getVisitDate(),
+                visit.getVisitTime(),
+                visit.getStatus().toString()
         );
-    }
-
-    private static int comparePlannedVisits(PlannedVisitDTO left, PlannedVisitDTO right) {
-        int dateComparison = left.getDate().compareTo(right.getDate());
-        if (dateComparison != 0) {
-            return dateComparison;
-        }
-        if (left.getStartTime() != null && right.getStartTime() != null) {
-            int timeComparison = left.getStartTime().compareTo(right.getStartTime());
-            if (timeComparison != 0) {
-                return timeComparison;
-            }
-        }
-        return left.getVisitTypeId().compareToIgnoreCase(right.getVisitTypeId());
-    }
-
-    private static PlanAvailabilityDTO toPlanAvailabilityDTO(String nickname, MonthlyAvailability availability) {
-        if (availability == null) {
-            return null;
-        }
-        return new PlanAvailabilityDTO(
-                nickname,
-                availability.getReferenceMonth(),
-                availability.getPreferredDays().stream().sorted().toList(),
-                availability.getWeeklyFrequency(),
-                availability.getSubmittedOn(),
-                availability.getSnapshotCapturedOn()
-        );
-    }
-
-    private static int compareShift(AssignedShiftDTO left, AssignedShiftDTO right) {
-        int monthComparison = left.getMonth().compareTo(right.getMonth());
-        if (monthComparison != 0) {
-            return monthComparison;
-        }
-        int dateComparison = left.getDate().compareTo(right.getDate());
-        if (dateComparison != 0) {
-            return dateComparison;
-        }
-        return left.getVisitTypeId().compareTo(right.getVisitTypeId());
-    }
-
-
-    private static String summarizeDays(List<TimeSlot> slots){
-        var days = slots.stream()
-                .map(TimeSlot::getDay)
-                .distinct()
-                .sorted()
-                .map(d -> d.getDisplayName (TextStyle.SHORT, Locale.ITALIAN))
-                .map(s -> s.substring (0,1).toUpperCase (Locale.ITALIAN) + s.substring (1) )
-                .collect(Collectors.joining(", "));
-        return days;
-    }
-
-    private static String startTimeString(VisitType vt){
-        if(vt.getSchedules ().isEmpty()) return "-";
-
-        return vt.getSchedules ().get(0).getStartTime().toString();
-    }
-
-    private static String endTimeString(VisitType vt){
-        if(vt.getSchedules ().isEmpty()) return "-";
-
-        var slot = vt.getSchedules ().get(0);
-        return slot.getStartTime ().plus (slot.getDuration ()).toString ();
-    }
-
-    private static int durationMinutes(VisitType vt){
-        if(vt.getSchedules ().isEmpty()) return 0;
-        var slot = vt.getSchedules ().get(0);
-        return  (int) slot.getDuration ().toMinutes();
-
     }
 }

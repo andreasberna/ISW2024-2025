@@ -45,7 +45,7 @@ package "model" {
     + removeVisit(visit: VisitType)
     + getAvailabilities(): Map<YearMonth, MonthlyAvailability>
     + findAvailability(month: YearMonth): Optional<MonthlyAvailability>
-    + registerAvailability(availability: MonthlyAvailability, today: LocalDate)
+    + registerAvailability(availability: MonthlyAvailability)
     + getScheduledShifts(): Map<YearMonth, List<AssignedShift>>
     + getShiftsForMonth(month: YearMonth): List<AssignedShift>
     + assignShifts(month: YearMonth, shifts: List<AssignedShift>)

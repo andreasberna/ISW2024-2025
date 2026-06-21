@@ -1,58 +1,74 @@
 package it.unibs.ingsw24_25.model;
 
+import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
+@Entity
+@Table(name = "places")
 public class Place {
+
+    @Id
+    private String id;
+
+    @Column(nullable = false, unique = true)
     private String placeTitle;
+
+    @Lob
     private String placeDescription;
     private String location;
-    private List<VisitType> visits = new ArrayList<VisitType> ();
+
+    @OneToMany(mappedBy = "place", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<VisitType> visits = new ArrayList<>();
+
+    protected Place() {}
 
     public Place(String placeTitle, String placeDescription, String location) {
+        this.id = UUID.randomUUID().toString();
         this.placeTitle = requireNonBlank(placeTitle, "Il titolo del luogo non può essere nullo");
         this.placeDescription = sanitizeNullable(placeDescription);
         this.location = sanitizeNullable(location);
+    }
+
+    public String getId() {
+        return id;
     }
 
     public String getPlaceTitle() {
         return placeTitle;
     }
+
     public void setPlaceTitle(String placeTitle) {
         this.placeTitle = requireNonBlank(placeTitle, "Il titolo del luogo non può essere nullo");
     }
+
     public String getPlaceDescription() {
         return placeDescription;
     }
+
     public void setPlaceDescription(String placeDescription) {
         this.placeDescription = sanitizeNullable(placeDescription);
     }
+
     public String getLocation() {
         return location;
     }
+
     public void setLocation(String location) {
         this.location = sanitizeNullable(location);
     }
-    public List<VisitType> getVisits() {
-        return ensureVisitsInitialize();
-    }
 
-    private List<VisitType> ensureVisitsInitialize() {
-        if(this.visits == null) this.visits = new ArrayList<>();
-        return this.visits;
+    public List<VisitType> getVisits() {
+        return visits;
     }
 
     public void setVisits(List<VisitType> visits) {
-        if(visits == null) this.visits = new ArrayList<>();
-        else this.visits = new ArrayList<>(visits);
-    }
-
-    public void addVisit(VisitType visit){
-        if(visit != null) ensureVisitsInitialize().add(visit);
-    }
-    public void removeVisit(VisitType visit){
-        if(visit != null) ensureVisitsInitialize().remove(visit);
+        this.visits.clear();
+        if (visits != null) {
+            this.visits.addAll(visits);
+        }
     }
 
     private String requireNonBlank(String value, String message) {
@@ -68,5 +84,18 @@ public class Place {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Place place = (Place) o;
+        return Objects.equals(id, place.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

@@ -1,11 +1,9 @@
 package it.unibs.ingsw24_25.repository;
 
 import it.unibs.ingsw24_25.model.SystemSettings;
-import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-public interface SettingsRepository {
-
-    public Optional<SystemSettings> load();
-    public void save(SystemSettings settings);
-    public boolean exists();
+@Repository
+public interface SettingsRepository extends JpaRepository<SystemSettings, Long> {
 }

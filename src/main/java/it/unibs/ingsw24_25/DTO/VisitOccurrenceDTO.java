@@ -23,6 +23,9 @@ public class VisitOccurrenceDTO {
     private final VisitStatus status;
     private final String visitTypeId;
     private final List<VisitBookingDTO> bookings;
+    private final Long planId;
+    private final String visitTypeTitle;
+    private final String volunteerNickname;
 
     public VisitOccurrenceDTO(String id,
                               YearMonth month,
@@ -37,7 +40,10 @@ public class VisitOccurrenceDTO {
                               int bookedParticipants,
                               VisitStatus status,
                               String visitTypeId,
-                              List<VisitBookingDTO> bookings) {
+                              List<VisitBookingDTO> bookings,
+                              Long planId,
+                              String visitTypeTitle,
+                              String volunteerNickname) {
         this.id = id;
         this.month = month;
         this.date = date;
@@ -52,6 +58,9 @@ public class VisitOccurrenceDTO {
         this.status = status;
         this.visitTypeId = visitTypeId;
         this.bookings = bookings;
+        this.planId = planId;
+        this.visitTypeTitle = visitTypeTitle;
+        this.volunteerNickname = volunteerNickname;
     }
 
     public String getId() {
@@ -108,5 +117,17 @@ public class VisitOccurrenceDTO {
 
     public List<VisitBookingDTO> getBookings() {
         return bookings;
+    }
+
+    public Long getPlanId() {
+        return planId;
+    }
+
+    public String getVisitTypeTitle() {
+        return visitTypeTitle;
+    }
+
+    public String getVolunteerNickname() {
+        return volunteerNickname;
     }
 }

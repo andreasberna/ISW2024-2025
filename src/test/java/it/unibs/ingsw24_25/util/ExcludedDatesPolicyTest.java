@@ -8,7 +8,7 @@ import java.time.YearMonth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class ExcludedDatePolicyTest {
+class ExcludedDatesPolicyTest {
 
     @Test
     void allowedMonthAddsTwoMonthsBeforeWindowStart() {

@@ -1,114 +1,99 @@
 package it.unibs.ingsw24_25.model;
 
-import it.unibs.ingsw24_25.util.AvailabilitySubmissionPolicy;
-
+import jakarta.persistence.*;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.Year;
 import java.time.YearMonth;
-import java.time.temporal.WeekFields;
-import java.util.*;
+import java.util.EnumSet;
+import java.util.Set;
 
-public final class MonthlyAvailability {
+@Entity
+@Table(name = "monthly_availabilities")
+public class MonthlyAvailability {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "volunteer_id")
+    private Volunteer volunteer;
+
+    @Column(nullable = false)
     private YearMonth referenceMonth;
-    private EnumSet<DayOfWeek> preferredDays = EnumSet.noneOf(DayOfWeek.class);
+
+    @ElementCollection(targetClass = DayOfWeek.class, fetch = FetchType.EAGER)
+    @CollectionTable(name = "preferred_days", joinColumns = @JoinColumn(name = "availability_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "day_of_week", nullable = false)
+    private Set<DayOfWeek> preferredDays = EnumSet.noneOf(DayOfWeek.class);
+
+    @Column(nullable = false)
     private int weeklyFrequency;
+
     private LocalDate submittedOn;
-    private boolean snapshot;
+
+    private boolean isSnapshot = false;
+
     private LocalDate snapshotCapturedOn;
 
+    protected MonthlyAvailability() {}
 
-    public MonthlyAvailability(YearMonth referenceMonth, Set<DayOfWeek> preferredDays, int weeklyFrequency, LocalDate submittedOn){
-        this(referenceMonth, preferredDays, weeklyFrequency, submittedOn, false, null);
-    }
-
-    public MonthlyAvailability(YearMonth referenceMonth, Set<DayOfWeek> preferredDays,
-                               int weeklyFrequency, LocalDate submittedOn,
-                               boolean snapshot, LocalDate snapshotCapturedOn) {
+    public MonthlyAvailability(YearMonth referenceMonth, Set<DayOfWeek> preferredDays, int weeklyFrequency, LocalDate submittedOn, boolean isSnapshot, LocalDate snapshotCapturedOn) {
         this.referenceMonth = referenceMonth;
-        setPreferredDays(preferredDays);
+        this.preferredDays = preferredDays;
         this.weeklyFrequency = weeklyFrequency;
         this.submittedOn = submittedOn;
-        this.snapshot = snapshot;
+        this.isSnapshot = isSnapshot;
         this.snapshotCapturedOn = snapshotCapturedOn;
     }
+    
+    public void ensureConsistency() {
+        // Method used in MonthlyVisitPlan, can be left empty or implemented
+    }
 
+
+    public Long getId() {
+        return id;
+    }
+
+    public Volunteer getVolunteer() {
+        return volunteer;
+    }
+
+    public void setVolunteer(Volunteer volunteer) {
+        this.volunteer = volunteer;
+    }
+
+    public YearMonth getReferenceMonth() {
+        return referenceMonth;
+    }
+
+    public YearMonth getMonth() {
+        return referenceMonth;
+    }
+
+    public Set<DayOfWeek> getPreferredDays() {
+        return preferredDays;
+    }
+
+    public int getWeeklyFrequency() {
+        return weeklyFrequency;
+    }
+
+    public int getPreferredOccurrences() {
+        return weeklyFrequency;
+    }
 
     public LocalDate getSubmittedOn() {
         return submittedOn;
     }
-    public YearMonth getReferenceMonth() {
-        return referenceMonth;
-    }
-    public EnumSet<DayOfWeek> getPreferredDays() {
-        return preferredDays;
-    }
-    public int getWeeklyFrequency() {
-        return weeklyFrequency;
-    }
+
     public boolean isSnapshot() {
-        return snapshot;
+        return isSnapshot;
     }
+
     public LocalDate getSnapshotCapturedOn() {
         return snapshotCapturedOn;
-    }
-
-    public MonthlyAvailability createSnapshot(LocalDate capturedOn){
-        LocalDate captureDate = capturedOn == null ? LocalDate.now () : capturedOn;
-        MonthlyAvailability copy = new MonthlyAvailability (referenceMonth, preferredDays, weeklyFrequency, submittedOn, true, captureDate);
-        copy.ensureConsistency ();
-        return copy;
-    }
-    public List<LocalDate> resolveAvailableDates() {
-        ensureConsistency ();
-        List<LocalDate> dates = new ArrayList<> ();
-        WeekFields weekFields = WeekFields.ISO;
-        Map<Integer, Integer> weeklyCounts = new HashMap<> ();
-        LocalDate current = referenceMonth.atDay(1);
-        LocalDate end = referenceMonth.atEndOfMonth();
-        while (!current.isAfter (end)) {
-            if (preferredDays.contains(current.getDayOfWeek())) {
-                int week = current.get (weekFields.weekOfWeekBasedYear());
-                int count = weeklyCounts.getOrDefault(week, 0) + 1;
-                if (count < weeklyFrequency) {
-                    dates.add (current);
-                    weeklyCounts.put (week, count + 1);
-                }
-            }
-            current = current.plusDays(1);
-        }
-        return List.copyOf(dates);
-    }
-
-    public void validateWindow(LocalDate today){
-        if (!AvailabilitySubmissionPolicy.isWindowOpen(referenceMonth, today))
-            throw new IllegalStateException("La finestra per il mese " + referenceMonth + " è chiusa");
-    }
-
-    private void setPreferredDays(Set<DayOfWeek> preferredDays) {
-        Objects.requireNonNull(preferredDays);
-        if (preferredDays.isEmpty()) throw new IllegalArgumentException ("Preferred Days non può essere vuoto");
-
-        this.preferredDays = EnumSet.copyOf (preferredDays);
-    }
-
-    private int validateWeeklyFrequency(int weeklyFrequency) {
-        if (weeklyFrequency <= 0)
-            throw new IllegalArgumentException ("Le frequenze settimanali devono essere un intero positive");
-        if (weeklyFrequency > preferredDays.size ())
-            throw new IllegalArgumentException ("la frequenza di giorni non può superare il numero di giorni preferiti");
-        if (weeklyFrequency > DayOfWeek.values ().length)
-            throw new IllegalArgumentException ("la frequenza non può superare i 7 giorni della settimana");
-
-        return weeklyFrequency;
-    }
-
-    public void ensureConsistency() {
-        setPreferredDays(preferredDays);
-        this.weeklyFrequency = validateWeeklyFrequency(weeklyFrequency);
-        this.referenceMonth = Objects.requireNonNull(referenceMonth);
-        this.submittedOn = Objects.requireNonNull(submittedOn);
-        if (snapshot)
-            this.snapshotCapturedOn = Objects.requireNonNull(snapshotCapturedOn);
     }
 }

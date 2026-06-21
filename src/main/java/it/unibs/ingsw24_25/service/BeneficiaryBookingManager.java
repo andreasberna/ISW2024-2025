@@ -3,62 +3,78 @@ package it.unibs.ingsw24_25.service;
 import it.unibs.ingsw24_25.DTO.VisitBookingDTO;
 import it.unibs.ingsw24_25.DTO.VisitOccurrenceDTO;
 import it.unibs.ingsw24_25.model.*;
-import it.unibs.ingsw24_25.repository.BeneficiaryRepository;
-import it.unibs.ingsw24_25.repository.MonthlyVisitPlanRepository;
-import it.unibs.ingsw24_25.repository.SettingsRepository;
-import it.unibs.ingsw24_25.repository.VisitTypeRepository;
-import it.unibs.ingsw24_25.repository.VolunteerRepository;
+import it.unibs.ingsw24_25.repository.*;
 import it.unibs.ingsw24_25.util.DTOMapper;
+import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Primary;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
-public class BeneficiaryBookingManager {
+@Service
+@Primary
+public class BeneficiaryBookingManager implements BeneficiaryService {
+    private static final Logger log = LoggerFactory.getLogger(BeneficiaryBookingManager.class);
+
     private final BeneficiaryRepository beneficiaryRepository;
-    private final VolunteerRepository volunteerRepository;
     private final MonthlyVisitPlanRepository monthlyVisitPlanRepository;
     private final VisitTypeRepository visitTypeRepository;
+    private final PlannedVisitRepository plannedVisitRepository;
     private final SettingsRepository settingsRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public BeneficiaryBookingManager(BeneficiaryRepository beneficiaryRepository,
-                                     VolunteerRepository volunteerRepository,
                                      MonthlyVisitPlanRepository monthlyVisitPlanRepository,
                                      VisitTypeRepository visitTypeRepository,
-                                     SettingsRepository settingsRepository) {
-        this.beneficiaryRepository = Objects.requireNonNull(beneficiaryRepository);
-        this.volunteerRepository = Objects.requireNonNull(volunteerRepository);
-        this.monthlyVisitPlanRepository = Objects.requireNonNull(monthlyVisitPlanRepository);
-        this.visitTypeRepository = Objects.requireNonNull(visitTypeRepository);
-        this.settingsRepository = Objects.requireNonNull(settingsRepository);
+                                     PlannedVisitRepository plannedVisitRepository,
+                                     SettingsRepository settingsRepository,
+                                     PasswordEncoder passwordEncoder) {
+        this.beneficiaryRepository = beneficiaryRepository;
+        this.monthlyVisitPlanRepository = monthlyVisitPlanRepository;
+        this.visitTypeRepository = visitTypeRepository;
+        this.plannedVisitRepository = plannedVisitRepository;
+        this.settingsRepository = settingsRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
+    @Override
+    public boolean verifyLogin(String username, String password) {
+        return beneficiaryRepository.findByUsername(username)
+                .map(beneficiary -> passwordEncoder.matches(password, beneficiary.getPassword()))
+                .orElse(false);
+    }
+
+    @Override
+    @Transactional
+    public void register(String fullName, String username, String password) {
+        if (beneficiaryRepository.findByUsername(username).isPresent()) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+        Beneficiary beneficiary = new Beneficiary(username, passwordEncoder.encode(password), fullName);
+        beneficiaryRepository.save(beneficiary);
+    }
+
+    @Override
     public List<VisitOccurrenceDTO> listVisitsByStatus(VisitStatus... statuses) {
         Set<VisitStatus> wanted = statuses == null || statuses.length == 0
                 ? EnumSet.allOf(VisitStatus.class)
                 : EnumSet.copyOf(Arrays.asList(statuses));
-        Map<String, VisitType> visitTypes = visitTypeRepository.findAll().stream()
-                .filter(Objects::nonNull)
-                .collect(Collectors.toMap(VisitType::getId, visit -> visit, (left, right) -> left));
+
         List<VisitOccurrenceDTO> occurrences = new ArrayList<>();
         for (MonthlyVisitPlan plan : monthlyVisitPlanRepository.findAll()) {
-            if (plan == null) {
-                continue;
-            }
-            for (PlannedVisit visit : plan.getPlannedVisits()) {
-                if (visit == null || !wanted.contains(visit.getStatus())) {
-                    continue;
+            if (plan.getPhase() == PlanningPhase.PUBBLICATO) {
+                for (PlannedVisit visit : plan.getVisits()) {
+                    if (visit.getVisitType() == null) continue;
+                    if (wanted.contains(visit.getStatus())) {
+                        occurrences.add(DTOMapper.toVisitOccurrenceDTO(plan, visit, visit.getVisitType(), false));
+                    }
                 }
-                VisitType visitType = visitTypes.get(visit.getVisitTypeId());
-                occurrences.add(DTOMapper.toVisitOccurrenceDTO(plan, visit, visitType, false));
             }
         }
         occurrences.sort(Comparator.comparing(VisitOccurrenceDTO::getDate)
@@ -66,158 +82,137 @@ public class BeneficiaryBookingManager {
         return occurrences;
     }
 
+    @Override
+    @Transactional
     public String bookVisit(String username, String visitId, int participants, String notes, LocalDate today) {
-        Beneficiary beneficiary = beneficiaryRepository.findByUsername(requireNonBlank(username, "Username non valido"))
-                .orElseThrow(() -> new IllegalArgumentException("Fruitore non trovato"));
-        Objects.requireNonNull(today, "La data odierna non può essere nulla");
-        int maxPerSubscription = resolveMaxPeoplePerSubscription();
-        if (participants <= 0 || participants > maxPerSubscription) {
-            throw new IllegalArgumentException("Numero partecipanti non valido");
+        Beneficiary beneficiary = beneficiaryRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Beneficiary not found: " + username));
+
+        PlannedVisit visit = plannedVisitRepository.findById(Long.parseLong(visitId))
+                .orElseThrow(() -> new EntityNotFoundException("Planned visit not found: " + visitId));
+
+        if (visit.getStatus() != VisitStatus.PROPOSTA) {
+            throw new IllegalStateException("Visita non disponibile per la prenotazione: " + visit.getStatus());
         }
-        PlannedVisitWithPlan target = findVisitAcrossPlans(visitId);
-        PlannedVisit plannedVisit = target.visit;
-        if (!plannedVisit.isProposable()) {
-            throw new IllegalStateException("La visita non è al momento prenotabile");
+
+        // Verify participants count against system limit (null-safe)
+        SystemSettings settings = settingsRepository.findById(1L).orElse(null);
+        int maxPerSub = (settings != null && settings.getMaxPeoplePerSubscription() > 0)
+                ? settings.getMaxPeoplePerSubscription() : Integer.MAX_VALUE;
+        if (participants < 1 || participants > maxPerSub) {
+            throw new IllegalArgumentException("Numero partecipanti non valido: deve essere tra 1 e " + maxPerSub);
         }
-        if (plannedVisit.getStatus() == VisitStatus.CANCELLED) {
-            throw new IllegalStateException("La visita è stata annullata");
+
+        // Check available spots
+        int currentBooked = visit.countBookedParticipants();
+        int maxParticipants = visit.getVisitType().getMaxParticipants();
+        if (currentBooked + participants > maxParticipants) {
+            throw new IllegalStateException("Posti insufficienti: disponibili " + (maxParticipants - currentBooked));
         }
-        VisitType visitType = resolveVisitType(plannedVisit.getVisitTypeId());
-        int newTotal = plannedVisit.getBookedParticipants() + participants;
-        if (newTotal > visitType.getMaxParticipants()) {
-            throw new IllegalStateException("Numero massimo di partecipanti superato");
+
+        // Create and add booking
+        VisitBooking booking = new VisitBooking(
+                beneficiary.getUsername(),
+                beneficiary.getFullName(),
+                participants,
+                notes
+        );
+        visit.addBooking(booking);
+        log.info("Prenotazione {} creata da {} per visita {} ({} partecipanti)",
+                booking.getCode(), username, visitId, participants);
+
+        // Transition to COMPLETA if now fully booked
+        if (currentBooked + participants >= maxParticipants) {
+            visit.setStatus(VisitStatus.COMPLETA);
+            log.info("Visita {} raggiunge capienza massima, passata a COMPLETA", visitId);
         }
-        VisitBooking booking = new VisitBooking(beneficiary.getUsername(), beneficiary.getFullName(), participants, notes);
-        plannedVisit.addBooking(booking);
-        plannedVisit.updateStatus (visitType);
-        if (plannedVisit.getBookedParticipants() >= visitType.getMaxParticipants()) {
-            plannedVisit.setProposable(false);
-        }
-        persistPlan(target.plan);
+
+        plannedVisitRepository.save(visit);
         return booking.getCode();
     }
 
+    @Override
     public List<VisitBookingDTO> listBookings(String username) {
-        String sanitized = requireNonBlank(username, "Username non valido");
-        beneficiaryRepository.findByUsername(sanitized)
-                .orElseThrow(() -> new IllegalArgumentException("Fruitore non trovato"));
-        List<VisitBookingDTO> bookings = new ArrayList<>();
+        beneficiaryRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Beneficiario non trovato: " + username));
+
+        List<VisitBookingDTO> result = new ArrayList<>();
         for (MonthlyVisitPlan plan : monthlyVisitPlanRepository.findAll()) {
-            if (plan == null) {
-                continue;
-            }
-            for (PlannedVisit visit : plan.getPlannedVisits()) {
-                if (visit == null) {
-                    continue;
-                }
-                VisitType visitType = visitTypeRepository.findById(visit.getVisitTypeId()).orElse(null);
+            for (PlannedVisit visit : plan.getVisits()) {
                 for (VisitBooking booking : visit.getBookings()) {
-                    if (booking.getBeneficiaryUsername().equals(sanitized)) {
-                        bookings.add(new VisitBookingDTO(
+                    if (booking.getBeneficiaryUsername().equals(username)) {
+                        result.add(new VisitBookingDTO(
                                 booking.getCode(),
                                 booking.getBeneficiaryName(),
                                 booking.getParticipants(),
                                 booking.getNotes(),
-                                visit.getDate(),
-                                visitType != null ? visitType.getVisitTitle() : visit.getVisitTypeId(),
+                                visit.getVisitDate(),
+                                visit.getVisitType().getVisitTitle(),
                                 visit.getStatus()
                         ));
                     }
                 }
             }
         }
-        return bookings;
+        return result;
     }
 
+    @Override
+    @Transactional
     public void cancelBooking(String username, String bookingCode, LocalDate today) {
-        String sanitizedUsername = requireNonBlank(username, "Username non valido");
-        beneficiaryRepository.findByUsername(sanitizedUsername)
-                .orElseThrow(() -> new IllegalArgumentException("Fruitore non trovato"));
-        if (bookingCode == null || bookingCode.isBlank()) {
-            throw new IllegalArgumentException("Codice prenotazione non valido");
-        }
-        Objects.requireNonNull(today, "La data odierna non può essere nulla");
-        PlannedVisitWithPlan target = findVisitByBooking(bookingCode);
-        VisitBooking booking = target.visit.findBookingByCode(bookingCode);
-        if (booking == null) {
-            throw new IllegalArgumentException("Prenotazione non trovata");
-        }
-        if (!sanitizedUsername.equals(booking.getBeneficiaryUsername())) {
-            throw new IllegalStateException("Il fruitore non è proprietario della prenotazione");
-        }
-        if (target.visit.getStatus() == VisitStatus.CANCELLED) {
-            throw new IllegalStateException("Impossibile cancellare una prenotazione su visita annullata");
-        }
-        target.visit.removeBookingByCode(bookingCode);
-        VisitType visitType = resolveVisitType(target.visit.getVisitTypeId());
-        updateVisitStatus(target.visit, visitType);
-        if (target.visit.getBookedParticipants() < visitType.getMaxParticipants()) {
-            target.visit.setProposable(true);
-        }
-        persistPlan(target.plan);
-    }
+        List<PlannedVisit> allVisits = plannedVisitRepository.findAll();
 
-    private PlannedVisitWithPlan findVisitAcrossPlans(String visitId) {
-        String sanitized = requireNonBlank(visitId, "Identificativo visita non valido");
-        for (MonthlyVisitPlan plan : monthlyVisitPlanRepository.findAll()) {
-            Optional<PlannedVisit> match = plan.findVisitById(sanitized);
-            if (match.isPresent()) {
-                return new PlannedVisitWithPlan(plan, match.get());
-            }
-        }
-        throw new IllegalArgumentException("Visita non trovata: " + sanitized);
-    }
+        for (PlannedVisit visit : allVisits) {
+            Optional<VisitBooking> found = visit.getBookings().stream()
+                    .filter(b -> b.getCode().equals(bookingCode))
+                    .findFirst();
 
-    private PlannedVisitWithPlan findVisitByBooking(String bookingCode) {
-        for (MonthlyVisitPlan plan : monthlyVisitPlanRepository.findAll()) {
-            if (plan == null) {
-                continue;
-            }
-            for (PlannedVisit visit : plan.getPlannedVisits()) {
-                if (visit == null) {
-                    continue;
+            if (found.isPresent()) {
+                VisitBooking booking = found.get();
+                if (!booking.getBeneficiaryUsername().equals(username)) {
+                    throw new IllegalStateException("Non autorizzato a cancellare questa prenotazione");
                 }
-                if (visit.findBookingByCode(bookingCode) != null) {
-                    return new PlannedVisitWithPlan(plan, visit);
+                if (visit.getStatus() == VisitStatus.CONFERMATA || visit.getStatus() == VisitStatus.CANCELLATA) {
+                    throw new IllegalStateException("Impossibile cancellare: visita già " + visit.getStatus());
                 }
+                boolean wasCompleta = visit.getStatus() == VisitStatus.COMPLETA;
+                visit.removeBooking(bookingCode);
+                // Revert to PROPOSTA if visit was full and now has room again
+                if (wasCompleta && visit.countBookedParticipants() < visit.getVisitType().getMaxParticipants()) {
+                    visit.setStatus(VisitStatus.PROPOSTA);
+                }
+                plannedVisitRepository.save(visit);
+                log.info("Prenotazione {} cancellata da {}", bookingCode, username);
+                return;
             }
         }
-        throw new IllegalArgumentException("Prenotazione non trovata");
+        throw new EntityNotFoundException("Prenotazione non trovata: " + bookingCode);
     }
 
-    private void updateVisitStatus(PlannedVisit visit, VisitType visitType) {
-        int total = visit.getBookedParticipants();
-        if (visit.getStatus() == VisitStatus.CANCELLED) {
-            return;
+    @Override
+    @Transactional
+    public void changePassword(String username, String oldPassword, String newPassword) {
+        Beneficiary beneficiary = beneficiaryRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Beneficiary not found: " + username));
+
+        if (!passwordEncoder.matches(oldPassword, beneficiary.getPassword())) {
+            throw new IllegalArgumentException("Old password is not correct");
         }
-        if (total >= visitType.getMinParticipants()) {
-            visit.setStatus(VisitStatus.CONFIRMED);
-        } else {
-            visit.setStatus(VisitStatus.PROPOSED);
-        }
+
+        beneficiary.setPassword(passwordEncoder.encode(newPassword));
+        beneficiaryRepository.save(beneficiary);
     }
 
-    private int resolveMaxPeoplePerSubscription() {
-        return settingsRepository.load()
-                .map(SystemSettings::getMaxPeoplePerSubscription)
-                .orElse(1);
+    @Override
+    public boolean isFirstAccessPending(String nickname) {
+        return false;
     }
 
-    private VisitType resolveVisitType(String visitTypeId) {
-        return visitTypeRepository.findById(visitTypeId)
-                .orElseThrow(() -> new IllegalArgumentException("Tipo visita non trovato: " + visitTypeId));
+    @Override
+    public void verifyDefaultCredentials(String nickname, String password) {
     }
 
-    private void persistPlan(MonthlyVisitPlan plan) {
-        monthlyVisitPlanRepository.save(plan);
+    @Override
+    public void setPersonalCredentials(String currentNickname, String newNickname, String password) {
     }
-
-    private String requireNonBlank(String value, String message) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(message);
-        }
-        return value.trim();
-    }
-
-    private record PlannedVisitWithPlan(MonthlyVisitPlan plan, PlannedVisit visit) {}
 }

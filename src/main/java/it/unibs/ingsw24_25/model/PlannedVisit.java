@@ -1,148 +1,125 @@
 package it.unibs.ingsw24_25.model;
 
+import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
+@Entity
+@Table(name = "planned_visits")
 public class PlannedVisit {
 
-    private String id;
-    private LocalDate date;
-    private TimeSlot timeSlot;
-    private String visitTypeId;
-    private List<String> assignedVolunteerIds = new ArrayList<>();
-    private boolean proposable;
-    private VisitStatus status = VisitStatus.PROPOSED;
-    private List<VisitBooking> bookings = new ArrayList<> ();
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    public PlannedVisit(LocalDate date, TimeSlot timeSlot, String visitTypeId, boolean proposable) {
-        this(null, date, timeSlot, visitTypeId, proposable, List.of(), VisitStatus.PROPOSED, List.of());
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "monthly_plan_id", nullable = false)
+    private MonthlyVisitPlan monthlyPlan;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "visit_type_id", nullable = false)
+    private VisitType visitType;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "volunteer_id")
+    private Volunteer volunteer;
+
+    @Column(nullable = false)
+    private LocalDate visitDate;
+
+    @Column(nullable = false)
+    private LocalTime visitTime;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private VisitStatus status;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "planned_visit_bookings", joinColumns = @JoinColumn(name = "planned_visit_id"))
+    private List<VisitBooking> bookings = new ArrayList<>();
+
+    protected PlannedVisit() {}
+
+    public PlannedVisit(MonthlyVisitPlan monthlyPlan, VisitType visitType, Volunteer volunteer, LocalDate visitDate, LocalTime visitTime) {
+        this.monthlyPlan = monthlyPlan;
+        this.visitType = visitType;
+        this.volunteer = volunteer;
+        this.visitDate = visitDate;
+        this.visitTime = visitTime;
+        this.status = VisitStatus.PROPOSTA;
     }
 
-    public PlannedVisit(String id, LocalDate date, TimeSlot timeSlot,
-                        String visitTypeId, boolean proposable, List<String> assignedVolunteerIds,
-                        VisitStatus status, List<VisitBooking> bookings) {
-        this.id = sanitizedId(id);
-        this.date = Objects.requireNonNull(date, "La data della visita non può essere nulla");
-        this.timeSlot = Objects.requireNonNull(timeSlot, "Il time slot della visita non può essere nullo");
-        this.visitTypeId = Objects.requireNonNull(visitTypeId, "L'identificativo del tipo visita non può essere nullo");
-        this.proposable = proposable;
-        this.status = status == null ? VisitStatus.PROPOSED : status;
-        setAssignedVolunteerIds(assignedVolunteerIds);
-        setBookings(bookings);
-    }
+    // Getters and setters
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
-    public void setId(String id) {
-        this.id = sanitizedId(id);
+
+    public MonthlyVisitPlan getMonthlyPlan() {
+        return monthlyPlan;
     }
-    public LocalDate getDate() {
-        return date;
+
+    public void setMonthlyPlan(MonthlyVisitPlan monthlyPlan) {
+        this.monthlyPlan = monthlyPlan;
     }
-    public TimeSlot getTimeSlot() {
-        return timeSlot;
+
+    public VisitType getVisitType() {
+        return visitType;
     }
-    public String getVisitTypeId() {
-        return visitTypeId;
+
+    public void setVisitType(VisitType visitType) {
+        this.visitType = visitType;
     }
-    public boolean isProposable() {return proposable;}
-    public void setProposable(boolean proposable) {
-        this.proposable = proposable;
+
+    public Volunteer getVolunteer() {
+        return volunteer;
     }
-    public List<String> getAssignedVolunteerIds() {
-        return assignedVolunteerIds;
+
+    public void setVolunteer(Volunteer volunteer) {
+        this.volunteer = volunteer;
     }
-    public void setAssignedVolunteerIds(List<String> assignedVolunteerIds) {
-        if (assignedVolunteerIds == null) {
-            this.assignedVolunteerIds = new ArrayList<>();
-        } else {
-            this.assignedVolunteerIds = new ArrayList<>(assignedVolunteerIds);
-        }
+
+    public LocalDate getVisitDate() {
+        return visitDate;
     }
-    public void assignVolunteer(String volunteerId) {
-        Objects.requireNonNull (volunteerId, "L'id del volontario non può essere nullo");
-        if (!assignedVolunteerIds.contains(volunteerId))
-            assignedVolunteerIds.add(volunteerId);
+
+    public void setVisitDate(LocalDate visitDate) {
+        this.visitDate = visitDate;
     }
-    public boolean unassignVolunteer(String volunteerId) {
-        return assignedVolunteerIds.remove(volunteerId);
+
+    public LocalTime getVisitTime() {
+        return visitTime;
     }
-    public void clearAssignements(){
-        assignedVolunteerIds.clear();
+
+    public void setVisitTime(LocalTime visitTime) {
+        this.visitTime = visitTime;
     }
-    public VisitStatus getStatus(){
+
+    public VisitStatus getStatus() {
         return status;
     }
-    public void setStatus(VisitStatus status){
-        this.status = status == null ? VisitStatus.PROPOSED : status;
-    }
-    public List<VisitBooking> getBookings(){
-        return List.copyOf(bookings);
-    }
-    public void setBookings(List<VisitBooking> bookings){
-        this.bookings = new ArrayList<> ();
-        if (bookings == null) return;
 
-        for (VisitBooking booking : bookings){
-            if (booking != null) this.bookings.add(copyBooking(booking));
-        }
+    public void setStatus(VisitStatus status) {
+        this.status = status;
     }
 
-    public void addBooking(VisitBooking booking){
-        Objects.requireNonNull (booking, "la prenotazione non può essere nulla");
-        this.bookings.add(copyBooking(booking));
-    }
-    public boolean removeBookingByCode(String bookingCode){
-        if (bookingCode == null) return false;
-
-        return bookings.removeIf(booking -> bookingCode.equals (booking.getCode()));
-    }
-    public int getBookedParticipants(){
-        return bookings.stream ()
-                .mapToInt (VisitBooking::getParticipants)
-                .sum ();
+    public List<VisitBooking> getBookings() {
+        return Collections.unmodifiableList(bookings);
     }
 
-    public void updateStatus(VisitType visitType) {
-        Objects.requireNonNull(visitType, "Il tipo visita non può essere nullo");
-        int total = getBookedParticipants();
-        if (status == VisitStatus.CANCELLED) {
-            return;
-        }
-        if (total >= visitType.getMinParticipants()) {
-            setStatus(VisitStatus.CONFIRMED);
-        } else {
-            setStatus(VisitStatus.PROPOSED);
-        }
+    public void addBooking(VisitBooking booking) {
+        this.bookings.add(booking);
     }
 
-    public VisitBooking findBookingByCode(String code){
-        if (code == null) return null;
-
-        return bookings.stream()
-                .filter(booking -> code.equals (booking.getCode()))
-                .findFirst ()
-                .map (this::copyBooking)
-                .orElse (null);
+    public void removeBooking(String code) {
+        this.bookings.removeIf(b -> b.getCode().equals(code));
     }
 
-    private VisitBooking copyBooking(VisitBooking booking){
-        return new VisitBooking(
-                booking.getCode(),
-                booking.getBeneficiaryUsername(),
-                booking.getBeneficiaryName(),
-                booking.getParticipants(),
-                booking.getNotes()
-        );
-    }
-
-    private String sanitizedId(String candidate) {
-        if (candidate == null || candidate.isBlank()) {
-            return java.util.UUID.randomUUID().toString();
-        }
-        return candidate.trim();
+    /** Somma i partecipanti di tutte le prenotazioni attive per questa visita. */
+    public int countBookedParticipants() {
+        return bookings.stream().mapToInt(VisitBooking::getParticipants).sum();
     }
 }

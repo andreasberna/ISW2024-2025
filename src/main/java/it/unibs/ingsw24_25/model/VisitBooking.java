@@ -1,13 +1,19 @@
 package it.unibs.ingsw24_25.model;
 
+import jakarta.persistence.Embeddable;
 import java.util.UUID;
 
+@Embeddable
 public class VisitBooking {
     private String code;
     private String beneficiaryUsername;
     private String beneficiaryName;
     private int participants;
     private String notes;
+
+    protected VisitBooking() {
+        // Required by JPA
+    }
 
     public VisitBooking(String beneficiaryUsername, String beneficiaryName, int participants, String notes) {
         this(UUID.randomUUID().toString(), beneficiaryUsername, beneficiaryName, participants, notes);
@@ -23,6 +29,12 @@ public class VisitBooking {
         this.participants = participants;
         this.notes = notes == null ? "" : notes.trim();
     }
+
+    public VisitBooking(Beneficiary beneficiary1, int i) {
+        this.beneficiaryUsername = beneficiary1.getUsername();
+        this.participants += i;
+    }
+
 
     public String getCode() {
         return code;

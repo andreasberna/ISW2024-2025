@@ -3,24 +3,30 @@ package it.unibs.ingsw24_25.service;
 import it.unibs.ingsw24_25.model.Configurator;
 import it.unibs.ingsw24_25.repository.ConfiguratorRepository;
 import it.unibs.ingsw24_25.repository.ProvisionedCredentialsRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+@Service
 public class ConfiguratorCredentialManager {
     private final ConfiguratorRepository configuratorRepository;
     private final ProvisionedCredentialsRepository provisionedCredentialsRepository;
+    private final PasswordEncoder passwordEncoder;
     private final Set<String> defaultCredentialsValidated = new HashSet<>();
 
     public ConfiguratorCredentialManager(ConfiguratorRepository configuratorRepository,
-                                         ProvisionedCredentialsRepository provisionedCredentialsRepository) {
+                                         ProvisionedCredentialsRepository provisionedCredentialsRepository,
+                                         PasswordEncoder passwordEncoder) {
         this.configuratorRepository = Objects.requireNonNull(configuratorRepository, "Il repository dei configuratori non può essere nullo");
         this.provisionedCredentialsRepository = Objects.requireNonNull(provisionedCredentialsRepository, "Il repository delle credenziali provisionate non può essere nullo");
+        this.passwordEncoder = Objects.requireNonNull(passwordEncoder, "Il password encoder non può essere nullo");
     }
 
     public boolean isFirstAccessPending(String nickname) {
@@ -31,6 +37,7 @@ public class ConfiguratorCredentialManager {
         return provisionedCredentialsRepository.hasConfiguratorCredential(sanitized);
     }
 
+    @Transactional
     public void verifyDefaultCredentials(String nickname, String password) {
         String sanitizedNickname = sanitizeNickname(nickname);
         if (sanitizedNickname == null) {
@@ -40,16 +47,17 @@ public class ConfiguratorCredentialManager {
                 .orElseThrow(() -> new IllegalStateException("Le credenziali personali sono già state impostate"));
 
         String sanitizedPassword = requireNonBlank(password, "La password di default non può essere vuota");
-        String expectedPassword = provisionedCredentialsRepository.findConfiguratorPassword(effectiveNickname)
+        String expectedPasswordHash = provisionedCredentialsRepository.findConfiguratorPassword(effectiveNickname)
                 .orElseThrow(() -> new IllegalStateException("Credenziali di primo accesso non registrate"));
 
-        if (!expectedPassword.equals(sanitizedPassword)) {
+        if (!passwordEncoder.matches(sanitizedPassword, expectedPasswordHash)) {
             throw new IllegalArgumentException("Credenziali di primo accesso non valide");
         }
 
         defaultCredentialsValidated.add(effectiveNickname);
     }
 
+    @Transactional
     public void setPersonalCredentials(String currentNickname, String newNickname, String password) {
         String sanitizedDefault = sanitizeNickname(currentNickname);
         if (sanitizedDefault == null) {
@@ -74,7 +82,7 @@ public class ConfiguratorCredentialManager {
             throw new IllegalArgumentException("Esiste già un configuratore con questo nickname");
         }
 
-        configuratorRepository.save(new Configurator(sanitizedNickname, sanitizedPassword));
+        configuratorRepository.save(new Configurator(sanitizedNickname, passwordEncoder.encode(sanitizedPassword)));
         provisionedCredentialsRepository.consumeConfiguratorCredential(sanitizedDefault);
         defaultCredentialsValidated.remove(sanitizedDefault);
     }
@@ -94,24 +102,19 @@ public class ConfiguratorCredentialManager {
             return false;
         }
 
-        return configuratorRepository.load()
-                .map(map -> map.get(normalizedNickname))
-                .map(configurator ->
-                        Objects.equals(configurator.getPassword(), normalizedPassword))
+        Optional<Configurator> configuratorOpt = configuratorRepository.findByNickname(normalizedNickname);
+
+        return configuratorOpt
+                .map(configurator -> passwordEncoder.matches(normalizedPassword, configurator.getPassword()))
                 .orElse(false);
     }
 
+    @Transactional
     public void registerConfigurator(String nickname, String password) {
         String sanitizedNickname = requireNonBlank(nickname, "Il nickname non può essere vuoto");
         String sanitizedPassword = requireNonBlank(password, "La password non può essere vuota");
 
-        Map<String, Configurator> existing = configuratorRepository.load()
-                .map(HashMap::new)
-                .orElseGet(HashMap::new);
-
-        boolean duplicate = existing.keySet().stream()
-                .filter(Objects::nonNull)
-                .anyMatch(registered -> registered.equalsIgnoreCase(sanitizedNickname));
+        boolean duplicate = configuratorRepository.findByNickname(sanitizedNickname).isPresent();
 
         if (duplicate) {
             throw new IllegalArgumentException("Esiste già un configuratore con questo nickname");
@@ -121,18 +124,32 @@ public class ConfiguratorCredentialManager {
             throw new IllegalArgumentException("Esiste già un configuratore con questo nickname");
         }
 
-        configuratorRepository.save(new Configurator(sanitizedNickname, sanitizedPassword));
+        configuratorRepository.save(new Configurator(sanitizedNickname, passwordEncoder.encode(sanitizedPassword)));
+    }
+
+    @Transactional
+    public void changePassword(String username, String oldPassword, String newPassword) {
+        String sanitizedNickname = requireNonBlank(username, "Il nickname non può essere vuoto");
+        String sanitizedOldPassword = requireNonBlank(oldPassword, "La vecchia password non può essere vuota");
+        String sanitizedNewPassword = requireNonBlank(newPassword, "La nuova password non può essere vuota");
+
+        Configurator configurator = configuratorRepository.findByNickname(sanitizedNickname)
+                .orElseThrow(() -> new IllegalArgumentException("Configuratore non trovato"));
+
+        if (!passwordEncoder.matches(sanitizedOldPassword, configurator.getPassword())) {
+            throw new IllegalArgumentException("Vecchia password errata");
+        }
+
+        configurator.setPassword(passwordEncoder.encode(sanitizedNewPassword));
+        configuratorRepository.save(configurator);
     }
 
     public List<String> listConfigurators() {
-        return configuratorRepository.load()
-                .map(map -> map.values().stream()
-                        .filter(Objects::nonNull)
-                        .map(Configurator::getNickname)
-                        .filter(Objects::nonNull)
-                        .sorted(String.CASE_INSENSITIVE_ORDER)
-                        .toList())
-                .orElseGet(List::of);
+        return configuratorRepository.findAll().stream()
+                .map(Configurator::getNickname)
+                .filter(Objects::nonNull)
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .collect(Collectors.toList());
     }
 
     public boolean hasPendingConfiguratorSeeds() {
@@ -167,12 +184,6 @@ public class ConfiguratorCredentialManager {
     }
 
     private boolean isConfiguratorNicknameTaken(String nickname) {
-        return configuratorRepository.load()
-                .map(map -> map.values().stream()
-                        .filter(Objects::nonNull)
-                        .map(Configurator::getNickname)
-                        .filter(Objects::nonNull)
-                        .anyMatch(existing -> existing.equalsIgnoreCase(nickname)))
-                .orElse(false);
+        return configuratorRepository.findByNickname(nickname).isPresent();
     }
 }

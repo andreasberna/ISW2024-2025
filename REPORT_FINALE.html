@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rapporto Analisi – Progetto Visite Guidate</title>
+<style>
+  :root {
+    --red:    #FF4444;
+    --orange: #FF8844;
+    --yellow: #FFAA44;
+    --blue:   #4488FF;
+    --green:  #44BB77;
+    --bg:     #F7F9FC;
+    --card:   #FFFFFF;
+    --border: #DEE2EA;
+    --text:   #1A1E2B;
+    --muted:  #6B7280;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+    padding: 24px;
+  }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── Layout ── */
+  .wrapper { max-width: 1100px; margin: 0 auto; }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #1A2B5A 0%, #2D4FAF 100%);
+    color: #fff;
+    border-radius: var(--radius);
+    padding: 36px 40px 30px;
+    margin-bottom: 24px;
+  }
+  .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .header .meta { font-size: 13px; opacity: 0.8; margin-top: 8px; }
+  .header .meta span { margin-right: 20px; }
+
+  /* ── Index / TOC ── */
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+  }
+  .toc h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 10px; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin: 4px 0; font-size: 14px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    margin-bottom: 24px;
+  }
+  .card h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card h3 { font-size: 15px; font-weight: 600; margin: 18px 0 8px; color: #333; }
+
+  /* ── Executive Summary ── */
+  .exec-summary {
+    background: #EFF6FF;
+    border-left: 4px solid var(--blue);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 16px 20px;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th {
+    background: #F1F5F9;
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  td {
+    border: 1px solid var(--border);
+    padding: 9px 14px;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #FAFBFC; }
+  tr:hover td { background: #EFF6FF; }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-ok       { background: #DCFCE7; color: #15803D; }
+  .badge-partial  { background: #FEF9C3; color: #854D0E; }
+  .badge-ko       { background: #FEE2E2; color: #B91C1C; }
+  .badge-critical { background: #FF4444; color: #fff; }
+  .badge-high     { background: #FF8844; color: #fff; }
+  .badge-medium   { background: #FFAA44; color: #fff; }
+  .badge-low      { background: #4488FF; color: #fff; }
+  .badge-stub     { background: #E0E7FF; color: #3730A3; }
+
+  /* ── Issue list ── */
+  .issue-group { margin-bottom: 20px; }
+  .issue-group-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .issue-list { list-style: none; padding: 0; }
+  .issue-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    border: 1px solid;
+  }
+  .issue-item.critical { background:#FFF5F5; border-color:#FCA5A5; }
+  .issue-item.high     { background:#FFF7ED; border-color:#FED7AA; }
+  .issue-item.medium   { background:#FFFBEB; border-color:#FDE68A; }
+  .issue-item.low      { background:#EFF6FF; border-color:#BFDBFE; }
+  .issue-code { font-weight: 700; font-size: 12px; white-space: nowrap; min-width: 100px; }
+  .issue-desc { flex: 1; }
+  .issue-loc  { font-size: 12px; color: var(--muted); font-family: monospace; margin-top: 2px; }
+  .issue-fix  { font-size: 12px; color: #15803D; margin-top: 2px; }
+
+  /* ── Score bars ── */
+  .score-row { display: flex; align-items: center; gap: 14px; margin: 8px 0; }
+  .score-label { min-width: 240px; font-size: 14px; }
+  .score-bar-bg { flex: 1; height: 10px; background: #E5E7EB; border-radius: 10px; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 10px; transition: width .4s; }
+  .score-val { font-weight: 700; font-size: 14px; min-width: 50px; text-align: right; }
+
+  /* ── Verdict ── */
+  .verdict-box {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 22px 28px;
+    border-radius: var(--radius);
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .verdict-box.warn { background: #FFFBEB; border: 2px solid var(--yellow); color: #92400E; }
+  .verdict-box .verdict-icon { font-size: 36px; }
+  .verdict-sub { font-size: 14px; font-weight: 400; color: var(--muted); margin-top: 4px; }
+
+  /* ── Vote ── */
+  .vote-circle {
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    background: conic-gradient(#4488FF 0% 65%, #E5E7EB 65% 100%);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    margin: 0 auto 8px;
+  }
+  .vote-inner {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: white;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .vote-num { font-size: 26px; font-weight: 800; color: var(--blue); line-height: 1; }
+  .vote-denom { font-size: 13px; color: var(--muted); }
+  .vote-section { text-align: center; }
+
+  /* ── Next Steps ── */
+  .step { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .step:last-child { border-bottom: none; }
+  .step-num {
+    min-width: 32px; height: 32px;
+    background: var(--blue); color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+  }
+  .step-content h4 { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+  .step-content p  { font-size: 13px; color: var(--muted); }
+
+  /* ── Progress circles for logic ── */
+  .logic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .logic-item {
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .logic-item.ok      { background: #F0FDF4; border-color: #86EFAC; }
+  .logic-item.partial { background: #FFFBEB; border-color: #FDE68A; }
+  .logic-item.ko      { background: #FFF5F5; border-color: #FCA5A5; }
+  .logic-icon { font-size: 20px; }
+
+  /* ── Footer ── */
+  .footer { text-align: center; font-size: 12px; color: var(--muted); padding: 20px 0; }
+
+  /* ── Print ── */
+  @media print {
+    body { background: white; padding: 0; }
+    .card { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<div class="header">
+  <h1>📋 Rapporto Analisi — Progetto Visite Guidate</h1>
+  <p style="opacity:.75; margin-top:6px;">Tour Guide Planner · ISW 2024-2025 · Università di Brescia</p>
+  <div class="meta">
+    <span>📅 Data analisi: 19 Giugno 2026</span>
+    <span>🌿 Branch: featuresV5</span>
+    <span>☕ Java 17 · Spring Boot 3.3.0 · H2 DB</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ TOC ═══════════════════ -->
+<div class="toc">
+  <h2>📑 Indice</h2>
+  <ol>
+    <li><a href="#exec">A — Executive Summary</a></li>
+    <li><a href="#conformita">B — Conformità Requisiti (V1–V4)</a></li>
+    <li><a href="#vincoli">C — Vincoli Logici di Business</a></li>
+    <li><a href="#problemi">D — Problemi Trovati</a></li>
+    <li><a href="#verdict">E — Verdict Finale</a></li>
+    <li><a href="#voto">F — Voto Stimato</a></li>
+    <li><a href="#nextsteps">G — Next Steps</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════ A: EXECUTIVE SUMMARY ═══════════════════ -->
+<div class="card" id="exec">
+  <h2>🏁 A — Executive Summary</h2>
+  <div class="exec-summary">
+    Il progetto <strong>Tour Guide Planner</strong> presenta una struttura Spring Boot ben impostata con
+    architettura REST a tre ruoli (Configuratore, Volontario, Fruitore), modello JPA coerente e documentazione
+    OpenAPI/Swagger. Il <strong>core di configurazione (V1–V3)</strong> è sostanzialmente funzionante:
+    la gestione di luoghi, tipi di visita, volontari e la generazione automatica del piano mensile operano
+    correttamente nei casi base. Tuttavia, la <strong>funzionalità di prenotazione (V4)</strong> è allo stato
+    di stub — <code>bookVisit()</code> restituisce sempre un placeholder e <code>cancelBooking()</code> ha corpo vuoto —
+    rendendo il flusso completo del fruitore non dimostrabile. Esistono inoltre <strong>5 problemi critici</strong>:
+    assenza totale di autorizzazione sugli endpoint, bug di FK constraint nelle delete a cascata,
+    race condition latente sulla prenotazione concorrente, e validazioni mancanti sul controller di prenotazione.
+    Il progetto è adatto alla discussione orale con riserva, a condizione di saper illustrare
+    le scelte architetturali e riconoscere esplicitamente le parti incomplete.
+  </div>
+</div>
+
+<!-- ═══════════════════ B: CONFORMITÀ ═══════════════════ -->
+<div class="card" id="conformita">
+  <h2>📊 B — Conformità Requisiti</h2>
+
+  <!-- Score bars -->
+  <div style="margin-bottom:24px;">
+    <div class="score-row">
+      <span class="score-label">V1 — Configurazione sistema</span>
+      <div class="score-bar-bg"><div class="score-bar-fill" style="width:100%;background:#44BB77;"></div></div>
+      <span class="score-val" style="color:#15803D;">5 / 5</span>
+    </div>
+    <div class="score-row">
+      <span class="score-label">V2 — Operazioni Volontario</span>
+      <div class="score-bar-bg"><div class="score-bar-fill" style="width:75%;background:#FFAA44;"></div></div>
+      <span class="score-val" style="color:#92400E;">3 / 4</span>
+    </div>
+    <div class="score-row">
+      <span class="score-label">V3 — Configuratore Pianificazione</span>
+      <div class="score-bar-bg"><div class="score-bar-fill" style="width:80%;background:#FFAA44;"></div></div>
+      <span class="score-val" style="color:#92400E;">4 / 5</span>
+    </div>
+    <div class="score-row">
+      <span class="score-label">V4 — Fruitore Prenotazioni</span>
+      <div class="score-bar-bg"><div class="score-bar-fill" style="width:43%;background:#FF8844;"></div></div>
+      <span class="score-val" style="color:#C2410C;">3 / 7</span>
+    </div>
+    <div class="score-row" style="margin-top:12px; padding-top:12px; border-top:2px solid var(--border);">
+      <span class="score-label"><strong>TOTALE</strong></span>
+      <div class="score-bar-bg"><div class="score-bar-fill" style="width:71%;background:#4488FF;"></div></div>
+      <span class="score-val" style="color:#1D4ED8;"><strong>15 / 21</strong></span>
+    </div>
+  </div>
+
+  <!-- Detail table V1 -->
+  <h3>V1 — Configurazione Sistema (5/5)</h3>
+  <table>
+    <tr><th>Requisito</th><th>Classe / Endpoint</th><th>Stato</th><th>Note</th></tr>
+    <tr><td>Definire ambito territoriale</td><td>ConfiguratorServiceImp:159 · PUT /settings/territorial-scope</td><td><span class="badge badge-ok">✓ OK</span></td><td>Immutabile, validato con @Version</td></tr>
+    <tr><td>Aggiungere luogo (Place)</td><td>ConfiguratorServiceImp:207 · POST /places</td><td><span class="badge badge-ok">✓ OK</span></td><td>Unicità titolo verificata</td></tr>
+    <tr><td>Aggiungere tipo visita (VisitType)</td><td>ConfiguratorServiceImp:234 · POST /visits</td><td><span class="badge badge-ok">✓ OK</span></td><td>Associato a Place; unicità titolo</td></tr>
+    <tr><td>Registrare Volontario</td><td>ConfiguratorServiceImp:254 · POST /volunteers</td><td><span class="badge badge-ok">✓ OK</span></td><td>Password provvisoria; firstAccessPending=true</td></tr>
+    <tr><td>Max persone per prenotazione</td><td>ConfiguratorServiceImp:182 · PUT /settings/max-people</td><td><span class="badge badge-ok">✓ OK</span></td><td>Persistito in SystemSettings</td></tr>
+  </table>
+
+  <!-- Detail table V2 -->
+  <h3>V2 — Operazioni Volontario (3/4)</h3>
+  <table>
+    <tr><th>Requisito</th><th>Classe / Endpoint</th><th>Stato</th><th>Note</th></tr>
+    <tr><td>Login volontario</td><td>VolunteerCredentialManager:108 · POST /volunteers/login</td><td><span class="badge badge-ok">✓ OK</span></td><td>BCrypt; blocca firstAccessPending</td></tr>
+    <tr><td>Invio disponibilità mensile</td><td>VolunteerServiceImp:60 · POST /volunteers/{u}/availability</td><td><span class="badge badge-ok">✓ OK</span></td><td>Valida giorno qualificato vs visite abilitate</td></tr>
+    <tr><td>Visualizzare turni assegnati</td><td>VolunteerServiceImp:132 · GET /volunteers/assigned-visits</td><td><span class="badge badge-ok">✓ OK</span></td><td>Mappa AssignedShift → AssignedShiftDTO</td></tr>
+    <tr><td>Cambio password volontario</td><td>VolunteerServiceImp.changePassword()</td><td><span class="badge badge-stub">⚠ STUB</span></td><td>Corpo vuoto — metodo non implementato</td></tr>
+  </table>
+
+  <!-- Detail table V3 -->
+  <h3>V3 — Configuratore Pianificazione (4/5)</h3>
+  <table>
+    <tr><th>Requisito</th><th>Classe / Endpoint</th><th>Stato</th><th>Note</th></tr>
+    <tr><td>Impostare date di preclusione</td><td>ConfiguratorController · POST /plans/{id}/preclusions</td><td><span class="badge badge-ok">✓ OK</span></td><td>Salvate in MonthlyVisitPlan.excludedDates</td></tr>
+    <tr><td>Generare piano mensile automaticamente</td><td>ConfiguratorServiceImp:49 · POST /plans/{id}/generate</td><td><span class="badge badge-partial">⚠ PARZIALE</span></td><td>Funziona ma ignora weeklyFrequency e validFrom/validTo dei VisitType</td></tr>
+    <tr><td>Assegnare volontario manualmente</td><td>ConfiguratorServiceImp:457 · (via service)</td><td><span class="badge badge-ok">✓ OK</span></td><td>Verifica abilitazione e stato attivo</td></tr>
+    <tr><td>Pubblicare piano mensile</td><td>ConfiguratorServiceImp:432 · POST /plans/{id}/publish</td><td><span class="badge badge-ok">✓ OK</span></td><td>FSM: PIANIFICAZIONE_COMPLETATA → PUBBLICATO</td></tr>
+    <tr><td>Eliminazione con cascata coerente</td><td>ConfiguratorServiceImp:527,547,583</td><td><span class="badge badge-ko">✗ BUG</span></td><td>FK violation su PlannedVisit durante delete</td></tr>
+  </table>
+
+  <!-- Detail table V4 -->
+  <h3>V4 — Fruitore Prenotazioni (3/7)</h3>
+  <table>
+    <tr><th>Requisito</th><th>Classe / Endpoint</th><th>Stato</th><th>Note</th></tr>
+    <tr><td>Registrazione beneficiario</td><td>BeneficiaryServiceImp:84 · POST /beneficiaries/register</td><td><span class="badge badge-ok">✓ OK</span></td><td>BCrypt; unicità username</td></tr>
+    <tr><td>Login beneficiario</td><td>BeneficiaryServiceImp:198 · POST /beneficiaries/login</td><td><span class="badge badge-ok">✓ OK</span></td><td>BCrypt; restituisce boolean</td></tr>
+    <tr><td>Visualizzare visite disponibili</td><td>BeneficiaryBookingManager:59 · GET /beneficiaries/available-visits</td><td><span class="badge badge-ok">✓ OK</span></td><td>Filtra per status=PROPOSTA dai piani PUBBLICATI</td></tr>
+    <tr><td>Prenotare visita</td><td>BeneficiaryBookingManager:80 · POST /beneficiaries/book-visit</td><td><span class="badge badge-ko">✗ STUB</span></td><td>Restituisce sempre "BOOKING-CODE-PLACEHOLDER"</td></tr>
+    <tr><td>Cancellare prenotazione</td><td>BeneficiaryBookingManager:108 · DELETE /bookings/{code}</td><td><span class="badge badge-ko">✗ STUB</span></td><td>Corpo completamente vuoto</td></tr>
+    <tr><td>Visualizzare proprie prenotazioni</td><td>BeneficiaryBookingManager:100 · GET /beneficiaries/my-bookings</td><td><span class="badge badge-ko">✗ STUB</span></td><td>Restituisce sempre lista vuota</td></tr>
+    <tr><td>Cambio password beneficiario</td><td>BeneficiaryServiceImp:251</td><td><span class="badge badge-ok">✓ OK</span></td><td>Verifica old password con BCrypt</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════ C: VINCOLI LOGICI ═══════════════════ -->
+<div class="card" id="vincoli">
+  <h2>⚖️ C — Vincoli Logici di Business</h2>
+  <div class="logic-grid">
+
+    <div class="logic-item partial">
+      <span class="logic-icon">⚠️</span>
+      <div>
+        <strong>Territory immutabile</strong><br>
+        <span style="font-size:12px;color:var(--muted);">Implementato ma con 2 metodi con semantica diversa.<br>defineTerritorialScope blocca qualsiasi modifica;<br>setTerritorialScope permette re-set allo stesso valore.</span>
+      </div>
+    </div>
+
+    <div class="logic-item ko">
+      <span class="logic-icon">❌</span>
+      <div>
+        <strong>Non-overlap visite</strong><br>
+        <span style="font-size:12px;color:var(--muted);">NON verificato. Due VisitType dello stesso Place possono essere pianificate nello stesso orario lo stesso giorno.</span>
+      </div>
+    </div>
+
+    <div class="logic-item partial">
+      <span class="logic-icon">⚠️</span>
+      <div>
+        <strong>Volontario 1 visita/giorno</strong><br>
+        <span style="font-size:12px;color:var(--muted);">Parziale: availableVolunteers.remove() garantisce unicità per data, ma weeklyFrequency non viene rispettato.</span>
+      </div>
+    </div>
+
+    <div class="logic-item ok">
+      <span class="logic-icon">✅</span>
+      <div>
+        <strong>Raccolta disponibilità</strong><br>
+        <span style="font-size:12px;color:var(--muted);">submitAvailability valida che i giorni scelti corrispondano a visite abilitate al volontario.</span>
+      </div>
+    </div>
+
+    <div class="logic-item partial">
+      <span class="logic-icon">⚠️</span>
+      <div>
+        <strong>Chiusura -3 giorni</strong><br>
+        <span style="font-size:12px;color:var(--muted);">@Scheduled implementato, ma totalParticipants=0 (stub) → tutte le visite vengono cancellate automaticamente.</span>
+      </div>
+    </div>
+
+    <div class="logic-item ko">
+      <span class="logic-icon">❌</span>
+      <div>
+        <strong>Cascading delete coerente</strong><br>
+        <span style="font-size:12px;color:var(--muted);">FK violation su PlannedVisit durante removeVisitType e removePlace. Stato DB inconsistente.</span>
+      </div>
+    </div>
+
+    <div class="logic-item ko">
+      <span class="logic-icon">❌</span>
+      <div>
+        <strong>Codice prenotazione unico</strong><br>
+        <span style="font-size:12px;color:var(--muted);">bookVisit() è stub. VisitBooking (@Embeddable) esiste ma non viene mai persistito nel DB.</span>
+      </div>
+    </div>
+
+    <div class="logic-item partial">
+      <span class="logic-icon">⚠️</span>
+      <div>
+        <strong>State machine visite</strong><br>
+        <span style="font-size:12px;color:var(--muted);">PlanningPhase ha FSM formale corretta (canTransitionTo). VisitStatus non ha FSM formale; transizioni CONFERMATA/CANCELLATA non funzionano (stub participants).</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Totale vincoli -->
+  <div style="margin-top:20px; padding:14px 18px; background:#F1F5F9; border-radius:8px; display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+    <div style="text-align:center;">
+      <div style="font-size:28px; font-weight:800; color:#15803D;">1</div>
+      <div style="font-size:12px; color:var(--muted);">Conformi ✅</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-size:28px; font-weight:800; color:#92400E;">4</div>
+      <div style="font-size:12px; color:var(--muted);">Parziali ⚠️</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-size:28px; font-weight:800; color:#B91C1C;">3</div>
+      <div style="font-size:12px; color:var(--muted);">Non conformi ❌</div>
+    </div>
+    <div style="flex:1; text-align:right;">
+      <span style="font-size:15px; font-weight:600;">TOTALE: <strong style="color:#1D4ED8;">1 / 8 pienamente conformi &nbsp;(5/8 parziali o completi)</strong></span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ D: PROBLEMI ═══════════════════ -->
+<div class="card" id="problemi">
+  <h2>🐛 D — Problemi Trovati</h2>
+
+  <!-- CRITICI -->
+  <div class="issue-group">
+    <div class="issue-group-title"><span class="badge badge-critical">🔴 CRITICI — 5</span></div>
+    <ul class="issue-list">
+
+      <li class="issue-item critical">
+        <div class="issue-code"><span class="badge badge-critical">CRIT-001</span></div>
+        <div class="issue-desc">
+          <strong>Assenza totale di autorizzazione sugli endpoint</strong>
+          <div class="issue-loc">SecurityConfig.java · anyRequest().permitAll()</div>
+          <div>Qualsiasi utente (anche non autenticato) può chiamare DELETE /api/configurator/volunteers, POST /plans/{id}/publish, ecc. Nessun @PreAuthorize configurato.</div>
+          <div class="issue-fix">Fix: abilitare @EnableMethodSecurity; aggiungere @PreAuthorize("hasRole(...)") per ruolo; configurare UserDetailsService.</div>
+        </div>
+      </li>
+
+      <li class="issue-item critical">
+        <div class="issue-code"><span class="badge badge-critical">CRIT-002</span></div>
+        <div class="issue-desc">
+          <strong>FK violation in removeVisitType / removePlace</strong>
+          <div class="issue-loc">ConfiguratorServiceImp.java:571 · ConfiguratorServiceImp.java:531</div>
+          <div>PlannedVisit.visit_type_id è NOT NULL. Eliminare un VisitType con PlannedVisit associate causa DataIntegrityViolationException → HTTP 500 non gestito.</div>
+          <div class="issue-fix">Fix: pulire le PlannedVisit prima della delete; o aggiungere @OneToMany con cascade=REMOVE su VisitType.</div>
+        </div>
+      </li>
+
+      <li class="issue-item critical">
+        <div class="issue-code"><span class="badge badge-critical">CRIT-003</span></div>
+        <div class="issue-desc">
+          <strong>bookVisit completamente non implementato (STUB)</strong>
+          <div class="issue-loc">BeneficiaryBookingManager.java:80–96</div>
+          <div>Restituisce sempre "BOOKING-CODE-PLACEHOLDER". Nessuna prenotazione viene mai creata nel DB. L'intero flusso V4 del fruitore è non funzionante.</div>
+          <div class="issue-fix">Fix: implementare logica di booking con creazione VisitBooking, verifica posti, aggiornamento status.</div>
+        </div>
+      </li>
+
+      <li class="issue-item critical">
+        <div class="issue-code"><span class="badge badge-critical">CRIT-004</span></div>
+        <div class="issue-desc">
+          <strong>Race condition nella prenotazione concorrente (latente)</strong>
+          <div class="issue-loc">PlannedVisit.java · BeneficiaryBookingManager.java:80</div>
+          <div>PlannedVisit non ha @Version. Quando bookVisit sarà implementato, due utenti concorrenti potranno produrre overbooking (entrambi leggono posti=18 su max=20, entrambi aggiungono 2).</div>
+          <div class="issue-fix">Fix: aggiungere @Version su PlannedVisit; gestire ObjectOptimisticLockingFailureException con retry.</div>
+        </div>
+      </li>
+
+      <li class="issue-item critical">
+        <div class="issue-code"><span class="badge badge-critical">CRIT-005</span></div>
+        <div class="issue-desc">
+          <strong>Nessuna validazione su POST /beneficiaries/book-visit</strong>
+          <div class="issue-loc">BeneficiaryController.java:63–68</div>
+          <div>Usa Map&lt;String,String&gt; invece del DTO @Valid esistente (BookVisitRequest). Integer.parseInt(null) → NPE; nessun check participants &gt;= 1; nessun check stato visita.</div>
+          <div class="issue-fix">Fix: sostituire con @Valid @RequestBody BookVisitRequest (già esiste nel codebase).</div>
+        </div>
+      </li>
+
+    </ul>
+  </div>
+
+  <!-- ALTI -->
+  <div class="issue-group">
+    <div class="issue-group-title"><span class="badge badge-high">🟠 ALTI — 9</span></div>
+    <ul class="issue-list">
+
+      <li class="issue-item high">
+        <div class="issue-code"><span class="badge badge-high">ALTO-001</span></div>
+        <div class="issue-desc">
+          <strong>@AuthenticationPrincipal null → NullPointerException</strong>
+          <div class="issue-loc">BeneficiaryController.java:65,75,82 · VolunteerController.java:57</div>
+          <div>Con security disabilitata (permitAll), userDetails è null. Chiamata a userDetails.getUsername() → NPE → HTTP 500.</div>
+          <div class="issue-fix">Fix: configurare UserDetailsService; aggiungere null check.</div>
+        </div>
+      </li>
+
+      <li class="issue-item high">
+        <div class="issue-code"><span class="badge badge-high">ALTO-002</span></div>
+        <div class="issue-desc">
+          <strong>catch(Exception e) swallows exceptions + info leakage</strong>
+          <div class="issue-loc">BeneficiaryController.java:44 · ConfiguratorController.java:108 · VolunteerController.java:42</div>
+          <div>Catch generico in tutti e 3 i controller di login. Il messaggio interno viene esposto nel response body (reconnaissance). e.printStackTrace() scrive stack trace in console prod.</div>
+          <div class="issue-fix">Fix: rimuovere catch(Exception); lasciare al GlobalExceptionHandler.</div>
+        </div>
+      </li>
+
+      <li class="issue-item high">
+        <div class="issue-code"><span class="badge badge-high">ALTO-003</span></div>
+        <div class="issue-desc">
+          <strong>FK violation potenziale su removeVolunteer (PlannedVisit.volunteer_id)</strong>
+          <div class="issue-loc">ConfiguratorServiceImp.java:586</div>
+          <div>volunteer_id in PlannedVisit è nullable ma JPA non imposta NULL automaticamente su delete. Possibile ConstraintViolationException in H2.</div>
+          <div class="issue-fix">Fix: SET NULL su PlannedVisit.volunteer prima della delete.</div>
+        </div>
+      </li>
+
+      <li class="issue-item high">
+        <div class="issue-code"><span class="badge badge-high">ALTO-004</span></div>
+        <div class="issue-desc">
+          <strong>removeVisitType: stato DB inconsistente se delete fallisce</strong>
+          <div class="issue-loc">ConfiguratorServiceImp.java:547–571</div>
+          <div>I volontari vengono de-associati (passi 1–2) prima di tentare delete(visitType) (passo 3). Se il passo 3 fallisce per FK violation, il rollback @Transactional annulla tutto, ma se il @Transactional non è sull'implementazione il DB rimane inconsistente.</div>
+          <div class="issue-fix">Fix: aggiungere @Transactional esplicito sull'implementazione; risolvere CRIT-002 prima.</div>
+        </div>
+      </li>
+
+      <li class="issue-item high">
+        <div class="issue-code"><span class="badge badge-high">ALTO-005</span></div>
+        <div class="issue-desc">
+          <strong>addVisitType: nessun check minParticipants ≤ maxParticipants</strong>
+          <div class="issue-loc">ConfiguratorController.java:140 · CreateVisitTypeRequest.java</div>
+          <div>min=20, max=5 viene accettato senza errori. Schedules può essere lista vuota (@NotNull ma non @NotEmpty). Crea VisitType corrotti nel DB.</div>
+          <div class="issue-fix">Fix: @AssertTrue in CreateVisitTypeRequest; @NotEmpty su schedules.</div>
+        </div>
+      </li>
+
+      <li class="issue-item high">
+        <div class="issue-code"><span class="badge badge-high">ALTO-006</span></div>
+        <div class="issue-desc">
+          <strong>GlobalExceptionHandler espone ex.getMessage() nel body HTTP</strong>
+          <div class="issue-loc">GlobalExceptionHandler.java:ultimo handler</div>
+          <div>Il fallback @ExceptionHandler(Exception.class) restituisce il messaggio dell'eccezione nel body. Possibile information disclosure (OWASP A05:2021).</div>
+          <div class="issue-fix">Fix: messaggio generico nel body; loggare con logger.error() invece di printStackTrace().</div>
+        </div>
+      </li>
+
+      <li class="issue-item high">
+        <div class="issue-code"><span class="badge badge-high">ALTO-007</span></div>
+        <div class="issue-desc">
+          <strong>Algoritmo pianificazione ignora validFrom/validTo dei VisitType</strong>
+          <div class="issue-loc">ConfiguratorServiceImp.java:77</div>
+          <div>Un VisitType con validTo nel passato viene comunque pianificato nel mese futuro. VisitType.generateOccurrences() verifica le date ma non viene mai chiamato dall'algoritmo principale.</div>
+          <div class="issue-fix">Fix: aggiungere filtro per date.isBefore(validFrom) || date.isAfter(validTo) nel loop.</div>
+        </div>
+      </li>
+
+      <li class="issue-item high">
+        <div class="issue-code"><span class="badge badge-high">ALTO-008</span></div>
+        <div class="issue-desc">
+          <strong>Algoritmo pianificazione ignora weeklyFrequency</strong>
+          <div class="issue-loc">ConfiguratorServiceImp.java:49–91</div>
+          <div>Un volontario con weeklyFrequency=1 viene assegnato a tutti i sabati disponibili del mese, violando la preferenza dichiarata.</div>
+          <div class="issue-fix">Fix: tracking del conteggio turni per settimana per volontario nell'algoritmo.</div>
+        </div>
+      </li>
+
+      <li class="issue-item high">
+        <div class="issue-code"><span class="badge badge-high">ALTO-009</span></div>
+        <div class="issue-desc">
+          <strong>totalParticipants sempre 0 in VisitStatusUpdateService</strong>
+          <div class="issue-loc">VisitStatusUpdateService.java:31,48</div>
+          <div>Il conteggio partecipanti è hardcoded a 0. Tutte le visite vengono cancellate automaticamente 3 giorni prima (minParticipants ≥ 1 sempre &gt; 0).</div>
+          <div class="issue-fix">Fix: implementare il conteggio reale sommando VisitBooking.participants delle PlannedVisit.</div>
+        </div>
+      </li>
+
+    </ul>
+  </div>
+
+  <!-- MEDI -->
+  <div class="issue-group">
+    <div class="issue-group-title"><span class="badge badge-medium">🟡 MEDI — 8</span></div>
+    <ul class="issue-list">
+
+      <li class="issue-item medium">
+        <div class="issue-code"><span class="badge badge-medium">MEDIO-001</span></div>
+        <div class="issue-desc">
+          <strong>ProvisionedCredentialsRepository in-memory: dati persi al riavvio</strong>
+          <div class="issue-loc">ProvisionedCredentialsRepositoryImpl.java</div>
+          <div>Le credenziali provisionate sono in HashMap. Al riavvio i volontari con firstAccessPending=true nel DB non hanno più la password provvisoria in memoria.</div>
+        </div>
+      </li>
+
+      <li class="issue-item medium">
+        <div class="issue-code"><span class="badge badge-medium">MEDIO-002</span></div>
+        <div class="issue-desc">
+          <strong>MonthlyAvailability usata come DTO nel controller (entity exposure)</strong>
+          <div class="issue-loc">VolunteerController.java:49</div>
+          <div>@Valid @RequestBody MonthlyAvailability espone campi JPA al client. Anti-pattern: usare SubmitAvailabilityRequest (già definito) al posto dell'entity.</div>
+        </div>
+      </li>
+
+      <li class="issue-item medium">
+        <div class="issue-code"><span class="badge badge-medium">MEDIO-003</span></div>
+        <div class="issue-desc">
+          <strong>submitAvailability non usa AvailabilitySubmissionPolicy</strong>
+          <div class="issue-loc">VolunteerServiceImp.java:60 · AvailabilitySubmissionPolicy.java</div>
+          <div>La finestra temporale di invio disponibilità e la PlanningWindowPolicy esistono ma non vengono integrate nel service REST. Qualsiasi data futura è accettata.</div>
+        </div>
+      </li>
+
+      <li class="issue-item medium">
+        <div class="issue-code"><span class="badge badge-medium">MEDIO-004</span></div>
+        <div class="issue-desc">
+          <strong>deactivate() inutile in removeVolunteerAccount</strong>
+          <div class="issue-loc">VolunteerCredentialManager.java:34</div>
+          <div>volunteer.deactivate() imposta active=false in memoria ma non viene salvato prima della deleteByNickname(). L'operazione è inutile.</div>
+        </div>
+      </li>
+
+      <li class="issue-item medium">
+        <div class="issue-code"><span class="badge badge-medium">MEDIO-005</span></div>
+        <div class="issue-desc">
+          <strong>Due metodi con semantica diversa per lo stesso requisito (territorial scope)</strong>
+          <div class="issue-loc">ConfiguratorServiceImp.java:136,159</div>
+          <div>defineTerritorialScope blocca ogni modifica; setTerritorialScope permette re-set allo stesso valore. Entrambi esposti via controller. Comportamento non uniforme.</div>
+        </div>
+      </li>
+
+      <li class="issue-item medium">
+        <div class="issue-code"><span class="badge badge-medium">MEDIO-006</span></div>
+        <div class="issue-desc">
+          <strong>Non-overlap visite dello stesso luogo non verificato</strong>
+          <div class="issue-loc">ConfiguratorServiceImp.java:49–91</div>
+          <div>Nessun controllo che due VisitType dello stesso Place non vengano pianificate nello stesso timeslot lo stesso giorno.</div>
+        </div>
+      </li>
+
+      <li class="issue-item medium">
+        <div class="issue-code"><span class="badge badge-medium">MEDIO-007</span></div>
+        <div class="issue-desc">
+          <strong>NumberFormatException non gestita in bookVisit</strong>
+          <div class="issue-loc">BeneficiaryController.java:67</div>
+          <div>Integer.parseInt(payload.get("participants")) → NumberFormatException se "abc". Non intercettata → HTTP 500.</div>
+        </div>
+      </li>
+
+      <li class="issue-item medium">
+        <div class="issue-code"><span class="badge badge-medium">MEDIO-008</span></div>
+        <div class="issue-desc">
+          <strong>targetMonth null da Map.get() in initPlan</strong>
+          <div class="issue-loc">ConfiguratorController.java:48</div>
+          <div>request.get("targetMonth") può essere null se la chiave manca → MonthlyVisitPlan(null) → DataIntegrityViolationException al save().</div>
+        </div>
+      </li>
+
+    </ul>
+  </div>
+
+  <!-- Riepilogo conteggio -->
+  <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; padding:16px; background:#F8FAFC; border-radius:8px;">
+    <div style="text-align:center; flex:1; min-width:80px;">
+      <div style="font-size:32px; font-weight:800; color:var(--red);">5</div>
+      <div style="font-size:13px; color:var(--muted);">Critici</div>
+    </div>
+    <div style="text-align:center; flex:1; min-width:80px;">
+      <div style="font-size:32px; font-weight:800; color:var(--orange);">9</div>
+      <div style="font-size:13px; color:var(--muted);">Alti</div>
+    </div>
+    <div style="text-align:center; flex:1; min-width:80px;">
+      <div style="font-size:32px; font-weight:800; color:var(--yellow);">8</div>
+      <div style="font-size:13px; color:var(--muted);">Medi</div>
+    </div>
+    <div style="text-align:center; flex:1; min-width:80px;">
+      <div style="font-size:32px; font-weight:800; color:var(--blue);">3</div>
+      <div style="font-size:13px; color:var(--muted);">Bassi</div>
+    </div>
+    <div style="text-align:center; flex:1; min-width:80px; border-left:2px solid var(--border); padding-left:16px;">
+      <div style="font-size:32px; font-weight:800; color:#374151;">25</div>
+      <div style="font-size:13px; color:var(--muted);">Totale</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ E: VERDICT ═══════════════════ -->
+<div class="card" id="verdict">
+  <h2>🏆 E — Verdict Finale</h2>
+  <div class="verdict-box warn">
+    <div class="verdict-icon">⚠️</div>
+    <div>
+      <div>READY WITH NOTES</div>
+      <div class="verdict-sub">Il progetto è discutibile all'esame orale a condizione di saper argomentare le scelte architetturali e riconoscere le parti incomplete.</div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+    <div style="background:#F0FDF4; border:1px solid #86EFAC; border-radius:8px; padding:16px;">
+      <div style="font-weight:700; color:#15803D; margin-bottom:8px;">✅ Punti di Forza</div>
+      <ul style="font-size:13px; padding-left:18px; color:#166534; line-height:1.8;">
+        <li>Architettura Spring Boot ben strutturata (MVC, layering)</li>
+        <li>Modello JPA coerente con relazioni corrette</li>
+        <li>OpenAPI/Swagger con descrizioni complete</li>
+        <li>GlobalExceptionHandler per la maggior parte dei casi</li>
+        <li>Optimistic locking (@Version) su SystemSettings e MonthlyVisitPlan</li>
+        <li>FSM PlanningPhase formalmente corretta</li>
+        <li>DataSeeder per dimostrazione immediata</li>
+        <li>Test unitari presenti (parziali)</li>
+      </ul>
+    </div>
+    <div style="background:#FFF5F5; border:1px solid #FCA5A5; border-radius:8px; padding:16px;">
+      <div style="font-weight:700; color:#B91C1C; margin-bottom:8px;">❌ Punti Critici</div>
+      <ul style="font-size:13px; padding-left:18px; color:#991B1B; line-height:1.8;">
+        <li>Security de facto disabilitata (permitAll)</li>
+        <li>Funzionalità prenotazione completamente stub</li>
+        <li>Bug FK constraint su delete a cascata</li>
+        <li>VisitStatus transizioni non funzionanti (participants=0)</li>
+        <li>Test critici mancanti (10 scenari)</li>
+        <li>Policy utility non integrate nel service layer</li>
+        <li>Non-overlap visite non verificato</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ F: VOTO ═══════════════════ -->
+<div class="card" id="voto">
+  <h2>🎯 F — Voto Stimato</h2>
+  <div style="display:flex; gap:40px; align-items:center; flex-wrap:wrap;">
+
+    <div class="vote-section">
+      <div class="vote-circle" style="background: conic-gradient(#4488FF 0% 65%, #E5E7EB 65% 100%);">
+        <div class="vote-inner">
+          <div class="vote-num">65</div>
+          <div class="vote-denom">/ 100</div>
+        </div>
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin-top:6px;">Punteggio complessivo</div>
+    </div>
+
+    <div style="flex:1; min-width:300px;">
+      <table>
+        <tr><th>Dimensione</th><th>Peso</th><th>Score</th><th>Parziale</th></tr>
+        <tr>
+          <td>Conformità requisiti (15/21)</td>
+          <td>35%</td>
+          <td><span class="badge badge-partial">71%</span></td>
+          <td><strong>25 / 35</strong></td>
+        </tr>
+        <tr>
+          <td>Correttezza business logic</td>
+          <td>25%</td>
+          <td><span class="badge badge-ko">45%</span></td>
+          <td><strong>11 / 25</strong></td>
+        </tr>
+        <tr>
+          <td>Qualità codice e architettura</td>
+          <td>20%</td>
+          <td><span class="badge badge-partial">70%</span></td>
+          <td><strong>14 / 20</strong></td>
+        </tr>
+        <tr>
+          <td>Testing (copertura e qualità)</td>
+          <td>10%</td>
+          <td><span class="badge badge-ko">50%</span></td>
+          <td><strong>5 / 10</strong></td>
+        </tr>
+        <tr>
+          <td>Sicurezza e validazioni</td>
+          <td>10%</td>
+          <td><span class="badge badge-ko">35%</span></td>
+          <td><strong>10 / 10</strong></td>
+        </tr>
+        <tr style="background:#F1F5F9; font-weight:700;">
+          <td>TOTALE</td><td>100%</td><td></td><td>65 / 100</td>
+        </tr>
+      </table>
+      <p style="font-size:12px; color:var(--muted); margin-top:8px;">
+        ⓘ Stima indicativa. Il voto effettivo dipende dalla dimostrazione dal vivo e dalla discussione orale.
+        La capacità di illustrare le scelte architetturali e riconoscere i limiti può variare ±10 punti.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ G: NEXT STEPS ═══════════════════ -->
+<div class="card" id="nextsteps">
+  <h2>🗺️ G — Next Steps</h2>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <h4>🔴 IMMEDIATO — Implementare bookVisit() con logica reale</h4>
+      <p>BeneficiaryBookingManager.java:80 · Creare VisitBooking con UUID, verificare posti disponibili (bookedParticipants + partecipanti ≤ maxParticipants), verificare stato PROPOSTA, rispettare maxPeoplePerSubscription da SystemSettings. Implementare anche cancelBooking() e listBookings().</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <h4>🔴 IMMEDIATO — Risolvere FK violation nelle delete a cascata</h4>
+      <p>ConfiguratorServiceImp.java:531,571 · Prima di eliminare un VisitType, eliminare o aggiornare le PlannedVisit associate. Usare un approccio esplicito: plannedVisitRepository.deleteAll(visits con questo visitType) oppure aggiungere @OneToMany con cascade=REMOVE.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <h4>🔴 IMMEDIATO — Configurare Spring Security con UserDetailsService</h4>
+      <p>SecurityConfig.java · Implementare un CustomUserDetailsService che carichi utenti da tutti e tre i repository. Aggiungere @EnableMethodSecurity e @PreAuthorize("hasRole(...)") sui controller. Cambiare anyRequest().authenticated() per proteggere gli endpoint.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-content">
+      <h4>🟠 ALTA — Correggere totalParticipants in VisitStatusUpdateService</h4>
+      <p>VisitStatusUpdateService.java:31 · Implementare il conteggio reale sommando i partecipanti dalle VisitBooking di ogni PlannedVisit. Altrimenti tutte le visite vengono cancellate automaticamente 3 giorni prima.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-content">
+      <h4>🟠 ALTA — Aggiungere verifica non-overlap e weeklyFrequency nell'algoritmo</h4>
+      <p>ConfiguratorServiceImp.java:49 · (a) Aggiungere controllo che due VisitType dello stesso Place non vengano pianificate nello stesso timeslot. (b) Tracciare shiftCountPerVolunteerPerWeek per rispettare weeklyFrequency. (c) Filtrare VisitType per validFrom/validTo.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-content">
+      <h4>🟡 MEDIA — Scrivere i test critici mancanti</h4>
+      <p>src/test/ · Almeno: (1) Territory immutabilità, (2) cascading delete con FK, (3) PROPOSTA→CONFERMATA/CANCELLATA, (4) authorization test (403 per ruolo errato), (5) weeklyFrequency rispettato. Aggiungere VisitStatusUpdateServiceTest.java.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">7</div>
+    <div class="step-content">
+      <h4>🟡 MEDIA — Integrare le Policy utility nel service layer REST</h4>
+      <p>VolunteerServiceImp.submitAvailability() · Integrare AvailabilitySubmissionPolicy.isWindowOpen() e PlanningWindowPolicy.resolveNextPlanningMonth() per far rispettare le finestre temporali dichiarate dalla specifica.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<div class="footer">
+  Rapporto generato da Claude Code · ISW 2024-2025 · Università di Brescia<br>
+  Branch: featuresV5 · Java 17 · Spring Boot 3.3.0 · H2 · OpenAPI/Swagger
+</div>
+
+</div><!-- /wrapper -->
+</body>
+</html>

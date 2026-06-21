@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beneficiario - Catalogo Visite</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script>
+        // Auth check
+        const userRole = localStorage.getItem('userRole');
+        if (userRole !== 'BENEFICIARY') {
+            window.location.href = '/index.html';
+        }
+    </script>
+    <style>
+        body { background-color: #f8f9fa; }
+        .section-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .visit-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            height: 100%;
+        }
+        .visit-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+            border-color: #198754;
+        }
+        .alert-fixed {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            display: none;
+            min-width: 350px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        .blink-red {
+            animation: blinker 1s linear infinite;
+            background-color: #dc3545;
+            color: white;
+        }
+        @keyframes blinker {
+            50% { opacity: 0.8; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Tour Guide Planner - Catalogo Visite</a>
+            <div class="d-flex align-items-center gap-3">
+                <span id="usernameDisplay" class="badge bg-success fs-6 d-flex align-items-center"></span>
+                <button id="logoutButton" class="btn btn-outline-light">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Alerts -->
+    <div id="successAlert" class="alert alert-success alert-dismissible fade show alert-fixed" role="alert">
+        <h5 class="alert-heading">Prenotazione Confermata!</h5>
+        <span id="successMessage"></span>
+        <button type="button" class="btn-close" onclick="hideAlert('successAlert')" aria-label="Close"></button>
+    </div>
+
+    <div id="conflictAlert" class="alert alert-dismissible fade show alert-fixed blink-red" role="alert">
+        <strong>Spiacenti, i posti si sono appena esauriti!</strong> Il catalogo è stato aggiornato.
+        <button type="button" class="btn-close btn-close-white" onclick="hideAlert('conflictAlert')" aria-label="Close"></button>
+    </div>
+
+    <div id="errorAlert" class="alert alert-danger alert-dismissible fade show alert-fixed" role="alert">
+        <span id="errorMessage">Si è verificato un errore.</span>
+        <button type="button" class="btn-close" onclick="hideAlert('errorAlert')" aria-label="Close"></button>
+    </div>
+
+    <div class="container">
+
+        <div class="row">
+            <!-- Sidebar: Modulo di Prenotazione -->
+            <div class="col-lg-4 order-lg-2 mb-4">
+                <div class="section-container position-sticky" style="top: 20px;">
+                    <h2 class="h5 mb-4 text-success border-bottom pb-2">Modulo di Prenotazione</h2>
+                    <p class="text-muted small mb-3">Clicca su una scheda del catalogo per autocompilare la prenotazione.</p>
+
+                    <form id="bookingForm">
+                        <div class="mb-3">
+                            <label for="visitId" class="form-label">ID Visita</label>
+                            <input type="text" class="form-control bg-light" id="visitId" readonly required placeholder="Seleziona una visita dal catalogo">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="selectedVisitTitle" class="form-label">Titolo Visita</label>
+                            <input type="text" class="form-control bg-light" id="selectedVisitTitle" readonly disabled>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="participantsCount" class="form-label">Numero Persone</label>
+                            <input type="number" class="form-control" id="participantsCount" min="1" value="1" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="bookingNotes" class="form-label">Note aggiuntive (opzionale)</label>
+                            <textarea class="form-control" id="bookingNotes" rows="2" placeholder="Es. presenza di bambini, disabilità motorie..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100 fw-bold py-2" id="submitBtn" disabled>
+                            Conferma Prenotazione
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Area Principale: Catalogo -->
+            <div class="col-lg-8 order-lg-1">
+                <div class="section-container">
+                    <h2 class="h4 mb-4 text-dark">Visite Disponibili</h2>
+
+                    <!-- Griglia Cards -->
+                    <div class="row row-cols-1 row-cols-md-2 g-4" id="visitsGrid">
+                        <!-- Placeholder dinamico -->
+                        <div class="col-12 text-center text-muted" id="loadingState">
+                            <div class="spinner-border text-success" role="status"></div>
+                            <p class="mt-2">Caricamento catalogo in corso...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-container">
+            <h2 class="h4 mb-4 text-primary border-bottom pb-2">Le Mie Prenotazioni</h2>
+            <div class="d-flex justify-content-end mb-3">
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="loadMyBookings()">Aggiorna</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered align-middle" id="bookingsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Codice Prenotazione</th>
+                            <th>Visita</th>
+                            <th>Data</th>
+                            <th>Partecipanti</th>
+                            <th>Stato</th>
+                            <th>Note</th>
+                            <th class="text-center">Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bookingsBody">
+                        <tr><td colspan="7" class="text-center text-muted py-3">Caricamento...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-container">
+            <h2 class="h4 mb-4 text-primary border-bottom pb-2">Cambio Password</h2>
+            <div class="card">
+                <div class="card-body">
+                    <form id="changePasswordForm">
+                        <div class="mb-3">
+                            <label for="oldPassword" class="form-label">Vecchia Password</label>
+                            <input type="password" class="form-control" id="oldPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">Nuova Password</label>
+                            <input type="password" class="form-control" id="newPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Cambia Password</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const API_BASE = '/api/beneficiaries';
+        const username = localStorage.getItem('username');
+
+        // Inject Basic Auth header on every API call using credentials stored at login
+        (function() {
+            const _fetch = window.fetch.bind(window);
+            window.fetch = function(url, options = {}) {
+                const u = localStorage.getItem('username');
+                const p = localStorage.getItem('password');
+                if (u && p) {
+                    options = {
+                        ...options,
+                        headers: { 'Authorization': 'Basic ' + btoa(u + ':' + p), ...(options.headers || {}) }
+                    };
+                }
+                return _fetch(url, options);
+            };
+        })();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('usernameDisplay').textContent = `Utente: ${username}`;
+            loadCatalog().catch(console.error);
+            loadMyBookings().catch(console.error);
+            document.getElementById('bookingForm').addEventListener('submit', handleBooking);
+            document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
+            document.getElementById('logoutButton').addEventListener('click', () => {
+                localStorage.clear();
+                window.location.href = '/index.html';
+            });
+        });
+
+        // UI Helpers
+        function showAlert(id, message = null) {
+            if(message) document.getElementById(id.replace('Alert', 'Message')).innerHTML = message;
+            document.getElementById(id).style.display = 'block';
+
+            if (id === 'successAlert') {
+                setTimeout(() => hideAlert(id), 5000);
+            } else if (id === 'conflictAlert') {
+                setTimeout(() => hideAlert(id), 6000);
+            }
+        }
+
+        function hideAlert(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function selectVisit(id, title, maxParticipants, bookedParticipants) {
+            document.getElementById('visitId').value = id;
+            document.getElementById('selectedVisitTitle').value = title;
+
+            const btn = document.getElementById('submitBtn');
+            const inputCount = document.getElementById('participantsCount');
+
+            const availableSeats = maxParticipants - bookedParticipants;
+
+            if(availableSeats > 0) {
+                btn.disabled = false;
+                inputCount.max = availableSeats;
+                inputCount.value = 1;
+            } else {
+                btn.disabled = true;
+                inputCount.value = 0;
+            }
+
+            // Scroll su mobile
+            if (window.innerWidth < 992) {
+                document.getElementById('bookingForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Fetch Catalogo
+        async function loadCatalog() {
+            const grid = document.getElementById('visitsGrid');
+
+            try {
+                // Si assume che PLANNED indichi le visite prenotabili
+                const response = await fetch(`${API_BASE}/available-visits`);
+
+                if (!response.ok) throw new Error('Errore durante il caricamento del catalogo');
+
+                const visits = await response.json();
+                grid.innerHTML = '';
+
+                if (visits.length === 0) {
+                    grid.innerHTML = '<div class="col-12 text-center text-muted py-5">Nessuna visita disponibile al momento.</div>';
+                    return;
+                }
+
+                visits.forEach(visit => {
+                    const available = visit.maxParticipants - visit.bookedParticipants;
+                    const percentFull = (visit.bookedParticipants / visit.maxParticipants) * 100;
+
+                    let progressColor = 'bg-success';
+                    if (percentFull > 75) progressColor = 'bg-warning';
+                    if (percentFull >= 100) progressColor = 'bg-danger';
+
+                    const card = document.createElement('div');
+                    card.className = 'col';
+                    card.innerHTML = `
+                        <div class="card visit-card h-100 ${available === 0 ? 'opacity-75' : ''}"
+                             onclick="${available > 0 ? `selectVisit('${visit.id}', '${visit.title.replace(/'/g, "\\'")}', ${visit.maxParticipants}, ${visit.bookedParticipants})` : ''}">
+                            <div class="card-body">
+                                <h5 class="card-title text-success">${visit.title}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">
+                                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-calendar-event" viewBox="0 0 16 16"><path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z"/><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/></svg>
+                                    ${visit.date} - Ore ${visit.startTime}
+                                </h6>
+                                <p class="card-text small mb-2">${visit.description}</p>
+
+                                <ul class="list-unstyled small mb-3">
+                                    <li><strong>📍 Ritrovo:</strong> ${visit.meetingPoint}</li>
+                                    <li><strong>🎟️ Biglietto:</strong> ${visit.ticketRequired ? 'Sì, richiesto' : 'Gratuito'}</li>
+                                </ul>
+
+                                <div class="mt-auto">
+                                    <div class="d-flex justify-content-between small mb-1 fw-bold">
+                                        <span>Posti occupati: ${visit.bookedParticipants} / ${visit.maxParticipants}</span>
+                                        ${available === 0 ? '<span class="text-danger">ESAURITI</span>' : `<span class="text-success">${available} liberi</span>`}
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar ${progressColor}" role="progressbar" style="width: ${percentFull}%" aria-valuenow="${visit.bookedParticipants}" aria-valuemin="0" aria-valuemax="${visit.maxParticipants}"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+
+            } catch (error) {
+                grid.innerHTML = `<div class="col-12 text-danger">Impossibile caricare il catalogo. Riprova più tardi.</div>`;
+                console.error(error);
+            }
+        }
+
+        // Submit Prenotazione (Gestione Concorrenza 409)
+        async function handleBooking(event) {
+            event.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Attendere...';
+            btn.disabled = true;
+
+            if(!username) {
+                showAlert('errorAlert', 'Username non trovato. Effettua nuovamente il login.');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return;
+            }
+
+            const payload = {
+                visitId: document.getElementById('visitId').value,
+                participants: parseInt(document.getElementById('participantsCount').value),
+                notes: document.getElementById('bookingNotes').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/book-visit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 409) {
+                    // CONFLITTO - Posti esauriti nel frattempo
+                    showAlert('conflictAlert');
+                    document.getElementById('bookingForm').reset();
+                    await loadCatalog(); // Ricaricamento background
+                } else if (response.status === 201) {
+                    // SUCCESSO
+                    const bookingCode = await response.text();
+                    showAlert('successAlert', `Il tuo codice prenotazione univoco è:<br><strong class="fs-4 text-primary">${bookingCode}</strong>`);
+                    document.getElementById('bookingForm').reset();
+                    document.getElementById('selectedVisitTitle').value = '';
+                    document.getElementById('submitBtn').disabled = true;
+                    await Promise.all([loadCatalog(), loadMyBookings()]);
+                } else {
+                    // ALTRI ERRORI
+                    let errorMsg = 'Errore sconosciuto';
+                    try {
+                        const errObj = await response.json();
+                        errorMsg = errObj.message || errorMsg;
+                    } catch(e) {
+                        errorMsg = await response.text();
+                    }
+                    showAlert('errorAlert', 'Impossibile prenotare: ' + errorMsg);
+                    btn.disabled = false;
+                }
+
+            } catch (error) {
+                showAlert('errorAlert', 'Errore di connessione al server.');
+                btn.disabled = false;
+            } finally {
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function loadMyBookings() {
+            const tbody = document.getElementById('bookingsBody');
+            try {
+                const response = await fetch(`${API_BASE}/my-bookings`);
+                if (!response.ok) throw new Error('Errore caricamento prenotazioni');
+                const bookings = await response.json();
+                tbody.innerHTML = '';
+                if (bookings.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nessuna prenotazione effettuata.</td></tr>';
+                    return;
+                }
+                bookings.forEach(b => {
+                    const statusBadge = b.status === 'PROPOSTA' ? 'bg-success' :
+                                       b.status === 'COMPLETA' ? 'bg-warning text-dark' :
+                                       b.status === 'CONFERMATA' ? 'bg-primary' : 'bg-secondary';
+                    const canCancel = b.status === 'PROPOSTA' || b.status === 'COMPLETA';
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><code class="fs-6">${b.code}</code></td>
+                        <td>${b.visitTitle || 'N/D'}</td>
+                        <td>${b.visitDate || 'N/D'}</td>
+                        <td>${b.participants}</td>
+                        <td><span class="badge ${statusBadge}">${b.status}</span></td>
+                        <td class="small text-muted">${b.notes || '-'}</td>
+                        <td class="text-center">
+                            ${canCancel ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelBooking('${b.code}')">Cancella</button>` : '-'}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-3">${err.message}</td></tr>`;
+            }
+        }
+
+        async function cancelBooking(code) {
+            if (!confirm('Sei sicuro di voler cancellare questa prenotazione?')) return;
+            try {
+                const response = await fetch(`${API_BASE}/bookings/${code}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Impossibile cancellare la prenotazione');
+                showAlert('successAlert', 'Prenotazione cancellata con successo.');
+                await Promise.all([loadMyBookings(), loadCatalog()]);
+            } catch (err) {
+                showAlert('errorAlert', err.message);
+            }
+        }
+
+        async function handleChangePassword(event) {
+            event.preventDefault();
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            try {
+                const response = await fetch(`${API_BASE}/change-password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, oldPassword, newPassword })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Errore nel cambio password');
+                }
+                showAlert('successAlert', 'Password cambiata con successo!');
+                document.getElementById('changePasswordForm').reset();
+            } catch (error) {
+                showAlert('errorAlert', 'Errore durante il cambio password: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

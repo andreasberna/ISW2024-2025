@@ -1,76 +1,47 @@
 package it.unibs.ingsw24_25.DTO;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.YearMonth;
-import java.util.List;
 
 public class PlannedVisitDTO {
 
-    private YearMonth month;
-    private LocalDate date;
-    private DayOfWeek dayOfWeek;
-    private LocalTime startTime;
-    private long durationMinutes;
-    private String visitTypeId;
-    private String visitTitle;
-    private boolean proposable;
-    private List<String> assignedVolunteers;
+    private Long id;
+    private String visitTypeTitle;
+    private String volunteerNickname;
+    private LocalDate visitDate;
+    private LocalTime visitTime;
+    private String status;
 
-    public PlannedVisitDTO(YearMonth month,
-                           LocalDate date,
-                           DayOfWeek dayOfWeek,
-                           LocalTime startTime,
-                           long durationMinutes,
-                           String visitTypeId,
-                           String visitTitle,
-                           boolean proposable,
-                           List<String> assignedVolunteers) {
-        this.month = month;
-        this.date = date;
-        this.dayOfWeek = dayOfWeek;
-        this.startTime = startTime;
-        this.durationMinutes = durationMinutes;
-        this.visitTypeId = visitTypeId;
-        this.visitTitle = visitTitle;
-        this.proposable = proposable;
-        this.assignedVolunteers = assignedVolunteers;
+    public PlannedVisitDTO(Long id, String visitTypeTitle, String volunteerNickname, LocalDate visitDate, LocalTime visitTime, String status) {
+        this.id = id;
+        this.visitTypeTitle = visitTypeTitle;
+        this.volunteerNickname = volunteerNickname;
+        this.visitDate = visitDate;
+        this.visitTime = visitTime;
+        this.status = status;
     }
 
-    public YearMonth getMonth() {
-        return month;
+    public Long getId() {
+        return id;
     }
 
-    public LocalDate getDate() {
-        return date;
+    public String getVisitTypeTitle() {
+        return visitTypeTitle;
     }
 
-    public DayOfWeek getDayOfWeek() {
-        return dayOfWeek;
+    public String getVolunteerNickname() {
+        return volunteerNickname;
     }
 
-    public LocalTime getStartTime() {
-        return startTime;
+    public LocalDate getVisitDate() {
+        return visitDate;
     }
 
-    public long getDurationMinutes() {
-        return durationMinutes;
+    public LocalTime getVisitTime() {
+        return visitTime;
     }
 
-    public String getVisitTypeId() {
-        return visitTypeId;
-    }
-
-    public String getVisitTitle() {
-        return visitTitle;
-    }
-
-    public boolean isProposable() {
-        return proposable;
-    }
-
-    public List<String> getAssignedVolunteers() {
-        return assignedVolunteers;
+    public String getStatus() {
+        return status;
     }
 }

@@ -1,17 +1,9 @@
 package it.unibs.ingsw24_25.repository;
 
-import it.unibs.ingsw24_25.model.VisitState;
 import it.unibs.ingsw24_25.model.VisitType;
-import java.util.List;
-import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-public interface VisitTypeRepository {
-
-    public Optional<VisitType> findById(String id);
-    public List<VisitType> findByPlace(String placeID);
-    public List<VisitType> findAll();
-    public List<VisitType> findByState(VisitState... states);
-    public void save(VisitType visitType);
-    public void deleteById(String id);
-
+@Repository
+public interface VisitTypeRepository extends JpaRepository<VisitType, String> {
 }

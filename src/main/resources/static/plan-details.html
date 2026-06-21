@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dettaglio Piano Mensile</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 id="planTitle">Dettaglio Piano</h1>
+        <div class="card">
+            <div class="card-body">
+                <p><strong>ID:</strong> <span id="planId"></span></p>
+                <p><strong>Stato:</strong> <span id="planPhase"></span></p>
+                <div class="mb-3">
+                    <label for="phaseSelector" class="form-label">Cambia Stato:</label>
+                    <select id="phaseSelector" class="form-select">
+                        <option value="AVAILABILITY_COLLECTION_OPEN">AVAILABILITY_COLLECTION_OPEN</option>
+                        <option value="AVAILABILITY_COLLECTION_CLOSED">AVAILABILITY_COLLECTION_CLOSED</option>
+                        <option value="PLAN_GENERATED">PLAN_GENERATED</option>
+                        <option value="ASSIGNMENT">ASSIGNMENT</option>
+                        <option value="REVIEW">REVIEW</option>
+                        <option value="READY_FOR_NEXT_CYCLE">READY_FOR_NEXT_CYCLE</option>
+                    </select>
+                </div>
+                <button id="changePhaseBtn" class="btn btn-primary">Aggiorna Stato</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const planId = urlParams.get('id');
+        const API_BASE = '/api/configurators';
+
+        document.getElementById('planId').textContent = planId;
+
+        document.getElementById('changePhaseBtn').addEventListener('click', async () => {
+            const newPhase = document.getElementById('phaseSelector').value;
+            try {
+                const response = await fetch(`${API_BASE}/plans/${planId}/phase`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phase: newPhase })
+                });
+                if (!response.ok) {
+                    throw new Error(`Errore: ${response.status}`);
+                }
+                alert('Stato aggiornato con successo');
+                location.reload();
+            } catch (error) {
+                alert('Errore durante l\'aggiornamento dello stato: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Volontario - Area Operativa</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script>
+        // Auth check
+        const userRole = localStorage.getItem('userRole');
+        if (userRole !== 'VOLUNTEER') {
+            window.location.href = '/index.html';
+        }
+    </script>
+    <style>
+        body { background-color: #f8f9fa; }
+        .section-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .alert-fixed {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            display: none;
+            min-width: 300px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        .table-responsive { max-height: 400px; overflow-y: auto; }
+        .booking-codes { font-family: monospace; font-size: 0.9em; background-color: #e9ecef; padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 2px; }
+    </style>
+</head>
+<body>
+
+    <!-- Modal cambio password obbligatorio al primo accesso -->
+    <div class="modal fade" id="forcePasswordModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="forcePasswordModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="forcePasswordModalLabel">Cambio Password Obbligatorio</h5>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Stai accedendo per la prima volta con una password assegnata dal sistema. Devi impostare una password personale prima di continuare.</p>
+                    <div id="forcePasswordError" class="alert alert-danger d-none"></div>
+                    <form id="forcePasswordForm">
+                        <div class="mb-3">
+                            <label for="forceOldPassword" class="form-label">Password Attuale (fornita dal sistema)</label>
+                            <input type="password" class="form-control" id="forceOldPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="forceNewPassword" class="form-label">Nuova Password</label>
+                            <input type="password" class="form-control" id="forceNewPassword" required minlength="6">
+                        </div>
+                        <div class="mb-3">
+                            <label for="forceConfirmPassword" class="form-label">Conferma Nuova Password</label>
+                            <input type="password" class="form-control" id="forceConfirmPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100 fw-bold">Imposta Nuova Password</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Tour Guide Planner - Area Operativa</a>
+            <div class="d-flex align-items-center gap-3">
+                <span id="usernameDisplay" class="badge bg-info text-dark fs-6 d-flex align-items-center"></span>
+                <button id="logoutButton" class="btn btn-outline-light">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Alerts -->
+    <div id="successAlert" class="alert alert-success alert-dismissible fade show alert-fixed" role="alert">
+        <strong>Operazione completata!</strong> <span id="successMessage">Salvataggio effettuato.</span>
+        <button type="button" class="btn-close" onclick="hideAlert('successAlert')" aria-label="Close"></button>
+    </div>
+
+    <div id="errorAlert" class="alert alert-danger alert-dismissible fade show alert-fixed" role="alert">
+        <span id="errorMessage">Si è verificato un errore.</span>
+        <button type="button" class="btn-close" onclick="hideAlert('errorAlert')" aria-label="Close"></button>
+    </div>
+
+    <div class="container">
+
+        <!-- Identificazione e Mese -->
+        <div class="section-container bg-light border">
+            <div class="row align-items-end">
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <label for="referenceMonth" class="form-label fw-bold">Mese di Riferimento</label>
+                    <!-- Imposto il mese prossimo come default -->
+                    <input type="month" id="referenceMonth" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <button type="button" class="btn btn-primary w-100 fw-bold" onclick="loadAgenda()">Carica la mia agenda</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+
+            <!-- Gestione Disponibilità (Form) -->
+            <div class="col-lg-4 mb-4">
+                <div class="section-container h-100">
+                    <h2 class="h5 mb-4 text-primary border-bottom pb-2">Invia Disponibilità Mensile</h2>
+                    <p class="small text-muted mb-3">Seleziona i giorni della settimana in cui sei disponibile per il mese indicato sopra e salva.</p>
+
+                    <form id="availabilityForm">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Giorni Disponibili</label>
+                            <div class="form-check">
+                                <input class="form-check-input day-checkbox" type="checkbox" value="MONDAY" id="dayMon">
+                                <label class="form-check-label" for="dayMon">Lunedì</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input day-checkbox" type="checkbox" value="TUESDAY" id="dayTue">
+                                <label class="form-check-label" for="dayTue">Martedì</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input day-checkbox" type="checkbox" value="WEDNESDAY" id="dayWed">
+                                <label class="form-check-label" for="dayWed">Mercoledì</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input day-checkbox" type="checkbox" value="THURSDAY" id="dayThu">
+                                <label class="form-check-label" for="dayThu">Giovedì</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input day-checkbox" type="checkbox" value="FRIDAY" id="dayFri">
+                                <label class="form-check-label" for="dayFri">Venerdì</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input day-checkbox" type="checkbox" value="SATURDAY" id="daySat">
+                                <label class="form-check-label" for="daySat">Sabato</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input day-checkbox" type="checkbox" value="SUNDAY" id="daySun">
+                                <label class="form-check-label" for="daySun">Domenica</label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100" id="btnSubmitAvailability">
+                            Invia Disponibilità
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Visualizzazione Agenda Turni -->
+            <div class="col-lg-8 mb-4">
+                <div class="section-container h-100">
+                    <h2 class="h5 mb-4 text-dark border-bottom pb-2">I miei Turni Assegnati</h2>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered align-middle" id="shiftsTable">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Data e Ora</th>
+                                    <th>Titolo Visita</th>
+                                    <th>Luogo di Ritrovo</th>
+                                    <th>Codici Partecipanti</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        Seleziona un mese e clicca su "Carica la mia agenda".
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="section-container">
+            <h2 class="h4 mb-4 text-primary border-bottom pb-2">Cambio Password</h2>
+            <div class="card">
+                <div class="card-body">
+                    <form id="changePasswordForm">
+                        <div class="mb-3">
+                            <label for="oldPassword" class="form-label">Vecchia Password</label>
+                            <input type="password" class="form-control" id="oldPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">Nuova Password</label>
+                            <input type="password" class="form-control" id="newPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Cambia Password</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const API_BASE = '/api/volunteers';
+        const username = localStorage.getItem('username');
+
+        // Inject Basic Auth header on every API call using credentials stored at login
+        (function() {
+            const _fetch = window.fetch.bind(window);
+            window.fetch = function(url, options = {}) {
+                const u = localStorage.getItem('username');
+                const p = localStorage.getItem('password');
+                if (u && p) {
+                    options = {
+                        ...options,
+                        headers: { 'Authorization': 'Basic ' + btoa(u + ':' + p), ...(options.headers || {}) }
+                    };
+                }
+                return _fetch(url, options);
+            };
+        })();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('usernameDisplay').textContent = `Utente: ${username}`;
+            // Set default month to next month
+            const today = new Date();
+            let nextMonth = today.getMonth() + 2;
+            let year = today.getFullYear();
+            if (nextMonth > 12) {
+                nextMonth = 1;
+                year++;
+            }
+            const monthString = nextMonth.toString().padStart(2, '0');
+            document.getElementById('referenceMonth').value = `${year}-${monthString}`;
+
+            document.getElementById('availabilityForm').addEventListener('submit', submitAvailability);
+            document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
+            document.getElementById('forcePasswordForm').addEventListener('submit', handleForcePasswordChange);
+            document.getElementById('logoutButton').addEventListener('click', () => {
+                localStorage.clear();
+                window.location.href = '/index.html';
+            });
+
+            if (localStorage.getItem('mustChangePassword') === 'true') {
+                const modal = new bootstrap.Modal(document.getElementById('forcePasswordModal'));
+                modal.show();
+            }
+        });
+
+        async function handleForcePasswordChange(event) {
+            event.preventDefault();
+            const oldPwd = document.getElementById('forceOldPassword').value;
+            const newPwd = document.getElementById('forceNewPassword').value;
+            const confirmPwd = document.getElementById('forceConfirmPassword').value;
+            const errorEl = document.getElementById('forcePasswordError');
+
+            if (newPwd !== confirmPwd) {
+                errorEl.textContent = 'Le password non coincidono.';
+                errorEl.classList.remove('d-none');
+                return;
+            }
+            errorEl.classList.add('d-none');
+
+            try {
+                const response = await fetch(`${API_BASE}/change-password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, oldPassword: oldPwd, newPassword: newPwd })
+                });
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.message || 'Errore nel cambio password');
+                }
+                localStorage.setItem('mustChangePassword', 'false');
+                localStorage.setItem('password', newPwd);
+                bootstrap.Modal.getInstance(document.getElementById('forcePasswordModal')).hide();
+                showAlert('success', 'Password cambiata con successo!');
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.classList.remove('d-none');
+            }
+        }
+
+        // UI Helpers
+        function showAlert(type, message) {
+            const id = type === 'success' ? 'successAlert' : 'errorAlert';
+            const msgId = type === 'success' ? 'successMessage' : 'errorMessage';
+
+            document.getElementById(msgId).textContent = message;
+            document.getElementById(id).style.display = 'block';
+
+            if (type === 'success') {
+                setTimeout(() => hideAlert(id), 3000);
+            }
+        }
+
+        function hideAlert(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function getNickname() {
+            if(!username) {
+                showAlert('error', 'Username non trovato. Effettua nuovamente il login.');
+                throw new Error('Nickname mancante');
+            }
+            return username;
+        }
+
+        function getMonth() {
+            const m = document.getElementById('referenceMonth').value;
+            if(!m) {
+                showAlert('error', 'Seleziona un mese di riferimento.');
+                throw new Error('Mese mancante');
+            }
+            return m;
+        }
+
+        // Fetch Agenda Turni
+        async function loadAgenda() {
+            const tbody = document.querySelector('#shiftsTable tbody');
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>';
+
+            try {
+                const nickname = getNickname();
+                const month = getMonth();
+
+                // Chiamata all'endpoint "shifts" creato appositamente nel controller
+                const response = await fetch(`${API_BASE}/${nickname}/shifts?month=${month}`);
+
+                if (!response.ok) {
+                    throw new Error('Errore durante il caricamento dei turni. Controlla il nickname.');
+                }
+
+                const shifts = await response.json();
+                tbody.innerHTML = '';
+
+                if (shifts.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Nessun turno assegnato per questo mese.</td></tr>';
+                    return;
+                }
+
+                shifts.forEach(shift => {
+                    // Estrazione dei codici di prenotazione dalla lista bookings
+                    let codesHtml = '<span class="text-muted small">Nessun iscritto</span>';
+                    if (shift.bookings && shift.bookings.length > 0) {
+                        codesHtml = shift.bookings.map(b => `<span class="booking-codes" title="${b.participants} persone">${b.code}</span>`).join('');
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>
+                            <strong>${shift.date}</strong><br>
+                            <span class="text-muted">Ore ${shift.startTime}</span>
+                        </td>
+                        <td class="fw-bold text-primary">${shift.title}</td>
+                        <td>${shift.meetingPoint}</td>
+                        <td>${codesHtml}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">${error.message}</td></tr>`;
+            }
+        }
+
+        // Submit Disponibilità Mensile
+        async function submitAvailability(event) {
+            event.preventDefault();
+            const btn = document.getElementById('btnSubmitAvailability');
+            const originalText = btn.innerHTML;
+
+            try {
+                const nickname = getNickname();
+                const month = getMonth();
+
+                // Raccolta giorni selezionati
+                const checkboxes = document.querySelectorAll('.day-checkbox:checked');
+                const availableDays = Array.from(checkboxes).map(cb => cb.value);
+
+                if (availableDays.length === 0) {
+                    showAlert('error', 'Seleziona almeno un giorno di disponibilità.');
+                    return;
+                }
+
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Salvataggio...';
+                btn.disabled = true;
+
+                const payload = {
+                    month: month, // Formato YYYY-MM
+                    availableDays: availableDays
+                };
+
+                const response = await fetch(`${API_BASE}/${nickname}/availability`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(errText || 'Errore del server durante il salvataggio.');
+                }
+
+                // Successo: pulizia e feedback 3s
+                document.getElementById('availabilityForm').reset();
+                showAlert('success', 'Disponibilità salvata correttamente nel database.');
+
+            } catch (error) {
+                showAlert('error', 'Impossibile inviare disponibilità: ' + error.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function handleChangePassword(event) {
+            event.preventDefault();
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            try {
+                const response = await fetch(`${API_BASE}/change-password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, oldPassword, newPassword })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Errore nel cambio password');
+                }
+                showAlert('success', 'Password cambiata con successo!');
+                document.getElementById('changePasswordForm').reset();
+            } catch (error) {
+                showAlert('error', 'Errore durante il cambio password: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

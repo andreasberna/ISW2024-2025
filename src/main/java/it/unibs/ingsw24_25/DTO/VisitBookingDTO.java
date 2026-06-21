@@ -1,6 +1,5 @@
 package it.unibs.ingsw24_25.DTO;
 
-import it.unibs.ingsw24_25.model.VisitBooking;
 import it.unibs.ingsw24_25.model.VisitStatus;
 
 import java.time.LocalDate;

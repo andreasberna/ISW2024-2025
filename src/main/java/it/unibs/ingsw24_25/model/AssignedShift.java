@@ -1,40 +1,84 @@
 package it.unibs.ingsw24_25.model;
 
+import jakarta.persistence.*;
+import java.time.YearMonth;
 import java.time.LocalDate;
-import java.util.Objects;
 
+@Entity
+@Table(name = "assigned_shifts")
 public class AssignedShift {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "volunteer_id", nullable = false)
+    private Volunteer volunteer;
+
+    @Column(name = "`month`", nullable = false)
+    private YearMonth month;
+
+    @Column(nullable = false)
     private LocalDate date;
+
+    @Column(nullable = false)
     private String visitTypeId;
+
+    @Embedded
     private TimeSlot slot;
 
-    public AssignedShift(LocalDate date, String visitTypeId, TimeSlot slot) {
-        if (date == null) {
-            throw new NullPointerException("La data del turno non può essere nulla");
-        }
-        if (slot == null) {
-            throw new NullPointerException("La fascia oraria non può essere nulla");
-        }
+    protected AssignedShift() {}
+
+    public AssignedShift(Volunteer volunteer, YearMonth month, LocalDate date, String visitTypeId, TimeSlot slot) {
+        this.volunteer = volunteer;
+        this.month = month;
         this.date = date;
-        this.visitTypeId = requireNonBlank(visitTypeId, "L'identificativo del tipo visita non può essere nullo");
+        this.visitTypeId = visitTypeId;
         this.slot = slot;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public Volunteer getVolunteer() {
+        return volunteer;
+    }
+
+    public void setVolunteer(Volunteer volunteer) {
+        this.volunteer = volunteer;
+    }
+
+    public YearMonth getMonth() {
+        return month;
+    }
+
+    public void setMonth(YearMonth month) {
+        this.month = month;
     }
 
     public LocalDate getDate() {
         return date;
     }
+
+    public void setDate(LocalDate date) {
+        this.date = date;
+    }
+
     public String getVisitTypeId() {
         return visitTypeId;
     }
+
+    public void setVisitTypeId(String visitTypeId) {
+        this.visitTypeId = visitTypeId;
+    }
+
     public TimeSlot getSlot() {
         return slot;
     }
 
-    private String requireNonBlank(String value, String message) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(message);
-        }
-        return value.trim();
+    public void setSlot(TimeSlot slot) {
+        this.slot = slot;
     }
 }
